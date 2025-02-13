@@ -22,8 +22,8 @@ Connectify is a social and collaborative platform designed for organizations to 
 ## Installation
 ```sh
 # Clone the repository
-git clone https://github.com/yourusername/connectify.git
-cd connectify
+git clone https://github.com/Faiqa-Nasir/connectify-frontend
+cd connectify-frontend
 
 # Backend Setup
 cd backend
@@ -32,7 +32,6 @@ python manage.py migrate
 python manage.py runserver
 
 # Frontend Setup
-cd ../frontend
 npm install
 npm start
 ```
