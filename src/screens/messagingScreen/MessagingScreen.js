@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ColorPalette from '../../constants/ColorPalette';
 
-export default function HomeScreen() {
+export default function MessagingScreen() {
     return (
         <View style={styles.container}>
             <Text style={styles.text}>Home Screen</Text>

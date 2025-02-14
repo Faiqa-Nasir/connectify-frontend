@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import AccountScreen from '../screens/AccountScreen';
-import ColorPalette from '../constants/ColorPalette';
+import AccountScreen from '../../screens/accountScreen/AccountScreen';
+import ColorPalette from '../../constants/ColorPalette';
 
 const Stack = createStackNavigator();
 

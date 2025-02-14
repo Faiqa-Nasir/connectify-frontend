@@ -2,12 +2,12 @@ import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import HomeStack from './homeStack/HomeStack.js';
-import MessagingStack from './messagingStack/MessagingStack';
-import TrendsStack from './trendsStack/TrendsStack';
-import AccountStack from './accountStack/AccountStack';
-import NoticeBoardStack from './noticeBoardStack/NoticeBoardStack';
-import ColorPalette from './constants/ColorPalette';
+import HomeStack from '../homeStack/HomeStack.js';
+import MessagingStack from '../messagingStack/MessagingStack';
+import TrendsStack from '../trendsStack/TrendsStack';
+import AccountStack from '../accountStack/AccountStack';
+import NoticeBoardStack from '../noticeBoardStack/NoticeBoardStack';
+import ColorPalette from '../../constants/ColorPalette.js';
 
 const Tab = createBottomTabNavigator();
 

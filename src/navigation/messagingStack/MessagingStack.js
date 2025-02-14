@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import MessagingScreen from '../screens/MessagingScreen';
-import ColorPalette from '../constants/ColorPalette';
+import MessagingScreen from '../../screens/messagingScreen/MessagingScreen';
+import ColorPalette from '../../constants/ColorPalette';
 
 const Stack = createStackNavigator();
 

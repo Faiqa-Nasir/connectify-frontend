@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import ColorPalette from '../constants/ColorPalette';
+import ColorPalette from '../../constants/ColorPalette';
 
 export default function TrendsScreen() {
     return (

@@ -1,39 +1,8 @@
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Animated } from 'react-native';
 import React, { useState, useContext } from 'react';
-import ColorPallete from '../../constants/ColorPallete';
-import { AuthContext } from '../../context/AuthContext';
-import LogOut from '../../../assets/svg/LogOut'; // Ensure this is correctly imported
-import ArrowLeft from '../../../assets/svg/ArrowLeft'; // Ensure this is correctly imported
-import AccountCard from '../../components/accountCard/AccountCard';
+import ColorPallete from '../../constants/ColorPalette';
 
 export default function AccountScreen({ navigation }) {
-  const { setIsAuth } = useContext(AuthContext);
-
-  // State for dropdown visibility
-  const [isDropdownVisible, setDropdownVisible] = useState(false);
-  const [arrowRotation, setArrowRotation] = useState(new Animated.Value(0)); // For arrow rotation
-
-  const handleGoBack = () => {
-    navigation.goBack();
-  };
-
-  const handleLogout = () => {
-    setIsAuth(false);
-  };
-
-  const handleEdit = () => {
-    console.log('Edit button clicked');
-  };
-
-  const toggleDropdown = () => {
-    setDropdownVisible(!isDropdownVisible);
-    Animated.timing(arrowRotation, {
-      toValue: isDropdownVisible ? 0 : 1, // Rotate to 180 degrees or back to 0
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  };
-
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
