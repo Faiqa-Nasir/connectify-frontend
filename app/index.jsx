@@ -1,22 +1,15 @@
-import { View, Text, StyleSheet } from "react-native";
+import 'react-native-gesture-handler';
+import Navigator from '../src/navigation/Navigator.js';
+import { Platform, View, AppState } from 'react-native';
+import React, { useEffect, useRef,useContext } from 'react';
 
-export default function HomeScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Welcome to Connectify!</Text>
-    </View>
-  );
+export default function App() {
+    
+    return (
+        <AppProviders>
+            <View style={[{ flex: 1 }, Platform.OS === 'android' && { marginTop: -28 }]}>
+                <Navigator />
+            </View>
+        </AppProviders>
+    );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#000",
-  },
-  text: {
-    color: "#fff",
-    fontSize: 20,
-  },
-});
