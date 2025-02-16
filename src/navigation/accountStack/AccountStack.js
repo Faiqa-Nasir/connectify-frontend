@@ -8,12 +8,9 @@ const Stack = createStackNavigator();
 export default function AccountStack() {
     return (
         <Stack.Navigator
-            screenOptions={{
-                headerStyle: {
-                    backgroundColor: ColorPalette.main_black,
-                },
-                headerTintColor: ColorPalette.white,
-            }}
+        screenOptions={{
+            headerShown: false, // This hides the header for all screens in this stack
+        }}
         >
             <Stack.Screen name="Account" component={AccountScreen} />
         </Stack.Navigator>

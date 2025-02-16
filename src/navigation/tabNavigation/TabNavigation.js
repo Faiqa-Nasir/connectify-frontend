@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import HomeStack from '../homeStack/HomeStack.js';
@@ -10,34 +9,29 @@ import NoticeBoardStack from '../noticeBoardStack/NoticeBoardStack';
 import ColorPalette from '../../constants/ColorPalette.js';
 
 const Tab = createBottomTabNavigator();
+import { SafeAreaView } from 'react-native';
 
 export default function TabNavigation() {
     return (
-        <NavigationContainer>
+        <SafeAreaView style={{ flex: 1, backgroundColor: ColorPalette.main_black }}>
             <Tab.Navigator
                 screenOptions={({ route }) => ({
                     tabBarIcon: ({ focused, color, size }) => {
                         let iconName;
-
-                        if (route.name === 'Home') {
-                            iconName = focused ? 'home' : 'home-outline';
-                        } else if (route.name === 'Messaging') {
-                            iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-                        } else if (route.name === 'Trends') {
-                            iconName = focused ? 'trending-up' : 'trending-up-outline';
-                        } else if (route.name === 'Account') {
-                            iconName = focused ? 'person' : 'person-outline';
-                        } else if (route.name === 'NoticeBoard') {
-                            iconName = focused ? 'notifications' : 'notifications-outline';
-                        }
+                        if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
+                        else if (route.name === 'Messaging') iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
+                        else if (route.name === 'Trends') iconName = focused ? 'trending-up' : 'trending-up-outline';
+                        else if (route.name === 'Account') iconName = focused ? 'person' : 'person-outline';
+                        else if (route.name === 'NoticeBoard') iconName = focused ? 'notifications' : 'notifications-outline';
 
                         return <Ionicons name={iconName} size={size} color={color} />;
                     },
+                    headerStyle: {
+                        backgroundColor: ColorPalette.purple,
+                    },
                     tabBarActiveTintColor: ColorPalette.purple,
                     tabBarInactiveTintColor: ColorPalette.grey_text,
-                    tabBarStyle: {
-                        backgroundColor: ColorPalette.main_black,
-                    },
+                    tabBarStyle: { backgroundColor: ColorPalette.main_black },
                 })}
             >
                 <Tab.Screen name="Home" component={HomeStack} />
@@ -46,6 +40,6 @@ export default function TabNavigation() {
                 <Tab.Screen name="NoticeBoard" component={NoticeBoardStack} />
                 <Tab.Screen name="Account" component={AccountStack} />
             </Tab.Navigator>
-        </NavigationContainer>
+        </SafeAreaView>
     );
 }

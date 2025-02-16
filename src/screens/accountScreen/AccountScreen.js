@@ -7,54 +7,10 @@ export default function AccountScreen({ navigation }) {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
-          <ArrowLeft />
-        </TouchableOpacity>
         <Text style={styles.heading}>My Account</Text>
       </View>
 
-      {/* Profile Card */}
-      <AccountCard
-        name="Arsalan Riaz"
-        designation="Consultant Physician"
-        id="2020391"
-        email="arsalanriaz717@gmail.com"
-        imageUri="https://example.com/your-image.jpg" // Replace with a valid image URL
-        onEdit={handleEdit}
-      />
-
-      {/* Professional Information Header */}
-      <TouchableOpacity style={styles.optionItem} onPress={toggleDropdown}>
-        <View style={styles.optionTextContainer}>
-          <Text style={styles.optionText}>Professional Information</Text>
-          <Animated.View
-            style={{
-              transform: [
-                {
-                  rotate: arrowRotation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0deg', '180deg'], // Rotate the arrow
-                  }),
-                },
-              ],
-            }}
-          >
-            <Text style={styles.arrow}>{'▲'}</Text>
-          </Animated.View>
-        </View>
-      </TouchableOpacity>
-
-      {/* Dropdown content */}
-      {isDropdownVisible && (
-        <View style={styles.dropdownContent}>
-          <Text style={styles.dropdownText}>Name: Arsalan Riaz</Text>
-          <Text style={styles.dropdownText}>License: 2020391</Text>
-          <Text style={styles.dropdownText}>Specialty: Consultant Physician</Text>
-          <Text style={styles.dropdownText}>Experience: 12 Year</Text>
-          <Text style={styles.dropdownText}>MBBS: Fatima Memorial Hospital Lahore</Text>
-        </View>
-      )}
-
+   
       {/* Other Options */}
       <TouchableOpacity style={styles.optionItem}>
         <Text style={styles.optionText}>Account Details</Text>
@@ -72,13 +28,6 @@ export default function AccountScreen({ navigation }) {
         <Text style={styles.optionText}>Support and Feedback</Text>
       </TouchableOpacity>
 
-      {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <View style={styles.logoutIcon}>
-          <LogOut color={ColorPallete.text_black} />
-        </View>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }

@@ -5,7 +5,7 @@ import ColorPalette from '../../constants/ColorPalette';
 export default function MessagingScreen() {
     return (
         <View style={styles.container}>
-            <Text style={styles.text}>Home Screen</Text>
+            <Text style={styles.text}>Messaging Screen</Text>
         </View>
     );
 }
