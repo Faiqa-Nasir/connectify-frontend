@@ -9,7 +9,16 @@ export default ColorPalette = {
     p_text: 'rgba(0, 0, 0, 1)',
     purple: 'rgba(189, 127, 236, 1)',
     pop_up_white: 'rgba(253, 251, 252, 1)',
-    bg: 'rgba(235, 237, 253, 1)',
+    bg: '#0B1218',  // Dark background
+    text_white: '#FFFFFF',
+    text_gray: '#8A8A8A',
+    accent: '#00E5BE', // Turquoise accent
+    card_bg: '#162028',
+    gradient_start: 'rgba(26, 193, 202, 0.1)',
+    gradient_end: 'rgba(7, 46, 51, 1)',
+    gradient_text: 'rgba(26, 193, 202, 1)',
+    bg: '#031523',
+    bg_post:'#072E33',
     blue: 'rgba(131, 195, 236, 1)',
     lightBlue: 'rgba(131, 195, 236, 0.2)',
     white: 'rgba(255, 255, 255, 1)',
