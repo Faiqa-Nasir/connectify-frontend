@@ -14,8 +14,14 @@ const authSlice = createSlice({
     logout: (state) => {
       state.isAuth = false;
     },
+    signup: (state) => {
+      state.isAuth = true;
+    },
+    forgotPassword: (state) => {
+      state.isAuth = true;
+    }
   },
 });
 
-export const { login, logout } = authSlice.actions;
+export const { login, logout,signup,forgotPassword } = authSlice.actions;
 export default authSlice.reducer;

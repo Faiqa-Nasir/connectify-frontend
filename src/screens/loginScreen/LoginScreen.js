@@ -24,11 +24,11 @@ const LoginScreen = () => {
         <Text style={styles.loginTitle}>Login</Text>
         <Text style={styles.subtitle}>Enter your email and password to Login</Text>
         <CustomInput
-          placeholder="someone@example.com"
+          placeholder="Email"
           onChangeText={setEmail}
         />
         <CustomInput
-          placeholder="********"
+          placeholder="Password"
           secureTextEntry
           onChangeText={setPassword}
         />
@@ -46,7 +46,9 @@ const LoginScreen = () => {
         </View>
         <CustomButton
           title="Login"
-          onPress={() => dispatch(login({ email, password, rememberMe }))}
+          onPress={() => {
+            dispatch(login({ email, password, rememberMe }));
+          }}
         />
         <Text style={styles.description}>Or login with</Text>
         <CustomButton 
@@ -55,15 +57,11 @@ const LoginScreen = () => {
           textColor={ColorPalette.text_black} 
           icon={<AntDesign name="google" size={20} color={ColorPalette.text_black} />}
         />
-
-              <TouchableOpacity>
-        <Text style={styles.signUpText}>Don't have an account?  <Text style={styles.signUpLink}>Sign up</Text></Text>
-      </TouchableOpacity>
-        
-        {/* {isAuth && <Text style={styles.loggedInText}>You are logged in!</Text>} */}
-      
+        <TouchableOpacity>
+          <Text style={styles.signUpText}>Don't have an account?  <Text style={styles.signUpLink}>Sign up</Text></Text>
+        </TouchableOpacity>
+        {isAuth && <Text style={styles.loggedInText}>You are logged in!</Text>}
       </RoundedContainer>
-
     </View>
   );
 };

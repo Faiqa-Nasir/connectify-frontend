@@ -11,6 +11,7 @@ export default function App() {
         'CG-Bold': require('../assets/fonts/ClashGrotesk-Bold.otf'),
         'CG-Semibold': require('../assets/fonts/ClashGrotesk-Semibold.otf'),
         'CG-Medium': require('../assets/fonts/ClashGrotesk-Medium.otf'),
+        'CG-Light': require('../assets/fonts/ClashGrotesk-Light.otf'),
       });
     return (
         <AppProvider>
