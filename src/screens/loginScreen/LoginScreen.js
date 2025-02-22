@@ -8,11 +8,12 @@ import { login } from "../../redux/authSlice";
 import ColorPalette from "../../constants/ColorPalette";
 import CustomInput from "../../components/CustomInput";
 import RoundedContainer from "../../components/RoundedContainer";
+import { useNavigation } from "@react-navigation/native";
+import ForgotPasswordScreen from "../forgotPasswordScreen/ForgotPasswordScreen";
 
-const LoginScreen = () => {
+const LoginScreen = ({ navigation }) => {
 
   const dispatch = useDispatch();
-  const isAuth = useSelector((state) => state.auth.isAuth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -41,26 +42,24 @@ const LoginScreen = () => {
             <Text style={styles.rememberMe}>Remember Me</Text>
           </View>
           <TouchableOpacity>
-            <Text style={styles.forgotPassword}>Forgotten Password?</Text>
+            <Text style={styles.forgotPassword} onPress={()=>navigation.navigate(ForgotPasswordScreen)}>Forgotten Password?</Text>
           </TouchableOpacity>
         </View>
         <CustomButton
           title="Login"
           onPress={() => {
-            dispatch(login({ email, password, rememberMe }));
+            // dispatch(login({ email, password, rememberMe }));
+            navigation.navigate('WorkspaceSelectionScreen');
           }}
         />
         <Text style={styles.description}>Or login with</Text>
-        <CustomButton 
-          title="Continue with Google" 
-          backgroundColor={ColorPalette.white} 
-          textColor={ColorPalette.text_black} 
+        <CustomButton
+          title="Continue with Google"
+          backgroundColor={ColorPalette.white}
+          textColor={ColorPalette.text_black}
           icon={<AntDesign name="google" size={20} color={ColorPalette.text_black} />}
         />
-        <TouchableOpacity>
-          <Text style={styles.signUpText}>Don't have an account?  <Text style={styles.signUpLink}>Sign up</Text></Text>
-        </TouchableOpacity>
-        {isAuth && <Text style={styles.loggedInText}>You are logged in!</Text>}
+          <Text style={styles.signUpText}>Don't have an account? <Text style={styles.signUpLink} onPress={() => navigation.navigate('SignupScreen')}>Sign up</Text></Text>
       </RoundedContainer>
     </View>
   );
@@ -104,6 +103,7 @@ const styles = StyleSheet.create({
     fontFamily: 'CG-Semibold',
     textAlign: 'center',
     fontWeight: '100',
+    marginTop: 20,
   },
   rememberForgotContainer: {
     marginTop: 10,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
     marginBottom: 10,
     fontFamily: 'CG-Regular',
-    textAlign:'center'
+    textAlign: 'center'
   },
   googleLogo: {
     width: 20,

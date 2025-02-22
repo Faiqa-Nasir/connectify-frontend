@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity,Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import CustomButton from "../../components/CustomButton";
 import { useDispatch, useSelector } from "react-redux";
 import { forgotPassword } from "../../redux/authSlice"; // Ensure this import is correct
@@ -9,20 +9,19 @@ import { useRouter } from "expo-router";
 import LabeledInput from "../../components/LabeledInput";
 import { AntDesign } from "@expo/vector-icons";
 
-const ForgotPassword = () => {
-
+const ForgotPasswordScreen = ({navigation}) => {
   const dispatch = useDispatch();
   const isAuth = useSelector((state) => state.auth.isAuth);
   const [email, setEmail] = useState('');
-
-  const router = useRouter();
 
   return (
     <View style={styles.container}>
       <RoundedContainer>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 50 }}>
-            <AntDesign name="arrowleft" size={24} color={ColorPalette.green} onPress={() => '/'} />
-                <Text style={styles.forgotText}>Help</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntDesign name="arrowleft" size={24} color={ColorPalette.green} />
+          </TouchableOpacity>
+          <Text style={styles.forgotText}>Help</Text>
         </View>
 
         <Text style={styles.forgotPasswordTitle}>Reset Your Password</Text>
@@ -38,12 +37,13 @@ const ForgotPassword = () => {
           title="Get Code"
           onPress={() => {
             dispatch(forgotPassword({ email }));
+            navigation.navigate('CodeVerificationScreen', { email });
           }}
         />
         <TouchableOpacity>
-          <Text style={styles.forgotText}>Remembered your password? <Text style={styles.forgotLink}>Login</Text></Text>
+          <Text style={styles.forgotText}>Remembered your password? <Text style={styles.forgotLink} onPress={()=>navigation.navigate('LoginScreen')}>Login</Text></Text>
         </TouchableOpacity>
-        {isAuth && <Text style={styles.loggedInText}>Password reset link sent!</Text>}
+        {/* {isAuth && <Text style={styles.loggedInText}>Password reset link sent!</Text>} */}
       </RoundedContainer>
     </View>
   );
@@ -94,4 +94,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ForgotPassword;
+export default ForgotPasswordScreen;

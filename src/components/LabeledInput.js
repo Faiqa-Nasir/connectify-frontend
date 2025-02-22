@@ -52,9 +52,10 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
       borderColor: ColorPalette.green,
-      borderWidth: 1,
-      borderTopLeftRadius: 10,
-      borderBottomLeftRadius: 10,    
+      borderWidth: 1.5,
+      borderRadius: 10,
+      // borderTopLeftRadius: 10,
+      // borderBottomLeftRadius: 10,    
   },
 
 });

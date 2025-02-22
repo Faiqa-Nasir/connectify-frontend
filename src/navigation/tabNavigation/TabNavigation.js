@@ -27,9 +27,9 @@ export default function TabNavigation() {
                         return <Ionicons name={iconName} size={size} color={color} />;
                     },
                     headerStyle: {
-                        backgroundColor: ColorPalette.purple,
+                        backgroundColor: ColorPalette.green,
                     },
-                    tabBarActiveTintColor: ColorPalette.purple,
+                    tabBarActiveTintColor: ColorPalette.gradient_text,
                     tabBarInactiveTintColor: ColorPalette.grey_text,
                     tabBarStyle: { backgroundColor: ColorPalette.main_black },
                 })}

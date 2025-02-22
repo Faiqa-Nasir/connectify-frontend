@@ -10,7 +10,7 @@ import RoundedContainer from "../../components/RoundedContainer";
 import { useRouter } from "expo-router";
 import LabeledInput from "../../components/LabeledInput";
 
-const SignupScreen = () => {
+const SignupScreen = ({navigation}) => {
 
   const dispatch = useDispatch();
   const isAuth = useSelector((state) => state.auth.isAuth);
@@ -21,11 +21,8 @@ const SignupScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const router = useRouter();
-
   return (
     <View style={styles.container}>
-      {/* <Text style={styles.title}>Hello, Ready to Connect</Text> */}
         <RoundedContainer>
           <Text style={styles.signUpTitle}>Sign Up</Text>
           <LabeledInput
@@ -70,13 +67,12 @@ const SignupScreen = () => {
             title="Sign Up"
             onPress={() => {
               dispatch(signup({ email, password }));
+              navigation.navigate('CodeVerificationScreen', { email });
             }}
           />
 
-          <TouchableOpacity>
-            <Text style={styles.loginText}>Already Have an account?  <Text style={styles.loginLink}>Login</Text></Text>
-          </TouchableOpacity>
-          {isAuth && <Text style={styles.loggedInText}>You are Signed up!</Text>}
+            <Text style={styles.loginText}>Already Have an account?  <Text style={styles.loginLink} onPress={()=>navigation.navigate('LoginScreen')} >Login</Text></Text>
+          {/* {isAuth && <Text style={styles.loggedInText}>You are Signed up!</Text>} */}
         </RoundedContainer>
     </View>
   );
@@ -116,11 +112,11 @@ const styles = StyleSheet.create({
   signUpTitle: {
     fontSize: 24,
     color: ColorPalette.text_black,
-    marginBottom: 20,
+    marginBottom: 40,
     fontFamily: 'CG-Semibold',
     textAlign: 'center',
     fontWeight: '100',
-    
+    marginTop: 20,
   },
   rememberForgotContainer: {
     marginTop: 10,
