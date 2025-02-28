@@ -29,6 +29,7 @@ export default function CodeVerificationScreen({ navigation, route }) {
         const newCode = [...code];
         newCode[index] = text;
         setCode(newCode);
+    
         if (text && index < 3) {
             inputRefs.current[index + 1].focus();
         } else if (!text && index > 0) {
@@ -80,15 +81,16 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 24,
-        fontWeight: "bold",
         marginBottom: 16,
         textAlign: "center",
+        fontFamily: 'CG-Semibold',
     },
     subtitle: {
         fontSize: 16,
         color: "#666",
         marginBottom: 20,
         textAlign: "center",
+        fontFamily: 'CG-Medium',
     },
     codeContainer: {
         flexDirection: "row",
@@ -106,6 +108,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         borderWidth: 1,
         borderColor: ColorPalette.green,
+        fontFamily: 'CG-Medium',
     },
     codeInputFocused: {
         borderWidth: 2,
@@ -124,11 +127,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#007BFF",
         borderRadius: 8,
         alignItems: "center",
-    },
-    buttonText: {
-        color: "#fff",
-        fontSize: 16,
-        fontWeight: "bold",
     },
     helpText: {
         fontSize: 14,

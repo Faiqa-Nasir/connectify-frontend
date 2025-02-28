@@ -22,6 +22,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     marginVertical: 10,
+    paddingHorizontal: 10,
   },
   content: {
     flexDirection: 'row',

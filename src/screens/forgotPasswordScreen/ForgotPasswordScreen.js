@@ -36,7 +36,7 @@ const ForgotPasswordScreen = ({navigation}) => {
         <CustomButton
           title="Get Code"
           onPress={() => {
-            dispatch(forgotPassword({ email }));
+            // dispatch(forgotPassword({ email }));
             navigation.navigate('CodeVerificationScreen', { email });
           }}
         />

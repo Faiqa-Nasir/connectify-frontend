@@ -126,7 +126,8 @@ const styles = StyleSheet.create({
     padding: 20,
     marginTop: 50,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.5,
+    borderColor: ColorPalette.grey_light,
     maxHeight: 400,
   },
   title: {
@@ -137,8 +138,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   header: {
-    fontSize: 24,
-    fontFamily: 'CG-Bold',
+    fontSize: 20,
+    fontFamily: 'CG-Medium',
     color: ColorPalette.primary,
     marginBottom: 20,
   },
@@ -154,7 +155,8 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     marginVertical: 5,
-    borderWidth: 1,
+    borderWidth: 0.5,
+    borderColor: ColorPalette.grey_light,
   },
   workspaceInfo: {
     flexDirection: 'column', // Stack name and member count vertically
