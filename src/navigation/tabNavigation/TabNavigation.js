@@ -32,9 +32,10 @@ export default function TabNavigation() {
                     tabBarActiveTintColor: ColorPalette.gradient_text,
                     tabBarInactiveTintColor: ColorPalette.grey_text,
                     tabBarStyle: { backgroundColor: ColorPalette.main_black },
+                    headerShown: false,
                 })}
             >
-                <Tab.Screen name="Home" component={HomeStack} />
+                <Tab.Screen name="Home" component={HomeStack}/>
                 <Tab.Screen name="Messaging" component={MessagingStack} />
                 <Tab.Screen name="Trends" component={TrendsStack} />
                 <Tab.Screen name="NoticeBoard" component={NoticeBoardStack} />
