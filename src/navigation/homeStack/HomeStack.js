@@ -12,7 +12,7 @@ export default function HomeStack() {
         <Stack.Navigator
         screenOptions={{
             headerShown: false, // This hides the header for all screens in this stack
-        }}
+    }}
         >
             <Stack.Screen name="Home" component={HomeScreen} />
         </Stack.Navigator>

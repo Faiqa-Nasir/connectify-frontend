@@ -24,5 +24,6 @@ export default ColorPalette = {
     white: 'rgba(255, 255, 255, 1)',
     gradient_dark: 'linear-gradient(90deg, #072E33 0%, #072E33 82%, #0C7075 100%)',
     green: 'rgba(7, 46, 51, 1)',
-    light_bg: 'rgba(235, 237, 253, 1)'
+    light_bg: 'rgba(235, 237, 253, 1)',
+    dark_bg: 'rgba(18, 18, 18, 1)',
 };

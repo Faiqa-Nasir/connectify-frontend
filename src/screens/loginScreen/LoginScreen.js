@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
     color: ColorPalette.white,
     marginBottom: 20,
     fontFamily: 'CG-Regular',
+    textAlign: 'center',
   },
   loggedInText: {
     fontSize: 24,
