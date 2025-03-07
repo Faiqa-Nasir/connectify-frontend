@@ -26,4 +26,5 @@ export default ColorPalette = {
     green: 'rgba(7, 46, 51, 1)',
     light_bg: 'rgba(235, 237, 253, 1)',
     dark_bg: 'rgba(18, 18, 18, 1)',
+    dark_gray:'rgba(255, 255, 255, 0.05)',
 };
