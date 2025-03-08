@@ -51,6 +51,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     padding: 15,
+    fontFamily: 'CG-Medium',
   },
   inputFocused: {
     borderColor: ColorPalette.green,
