@@ -13,11 +13,12 @@ import {
   Platform,
   SafeAreaView,
   Linking,
+  Clipboard
 } from "react-native"
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons"
 import ColorPalette from "../../constants/ColorPalette"
 import MessageActions from "../../components/MessageActions"
-import Clipboard from "@react-native-clipboard/clipboard"
+// import Clipboard from "@react-native-clipboard/clipboard"
 
 const MessageTypes = {
   TEXT: "text",
