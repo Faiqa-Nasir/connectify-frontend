@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import NoticeBoardScreen from '../../screens/noticeBoardScreen/NoticeBoardScreen';
+import NoticeBoardScreen from '../../screens/NoticeBoardScreen/NoticeBoardScreen';
 import ColorPalette from '../../constants/ColorPalette';
 
 const Stack = createStackNavigator();

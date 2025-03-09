@@ -7,6 +7,7 @@ import RoundedContainer from '../../components/RoundedContainer';
 import CustomButton from '../../components/CustomButton';
 import { FontAwesome } from '@expo/vector-icons';
 import { AntDesign } from "@expo/vector-icons";
+import HomeScreen from '../homeScreen/HomeScreen';
 
 const WorkspaceSelectionScreen = ({navigation}) => {
   const [workspaces, setWorkspaces] = useState([]);
@@ -42,6 +43,7 @@ const WorkspaceSelectionScreen = ({navigation}) => {
           onPress={() => {
             // Handle join workspace logic here
             alert(`Joining workspace: ${item.name}`);
+            navigation.navigate('HomeScreen');
           }}
           height={15}
           width={70}

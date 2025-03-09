@@ -45,6 +45,8 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.forgotPassword} onPress={()=>navigation.navigate(ForgotPasswordScreen)}>Forgotten Password?</Text>
           </TouchableOpacity>
         </View>
+        <Text style={styles.signUpText}>Don't have an account? <Text style={styles.signUpLink} onPress={() => navigation.navigate('SignupScreen')}>Sign up</Text></Text>
+
         <CustomButton
           title="Login"
           onPress={() => {
@@ -59,7 +61,6 @@ const LoginScreen = ({ navigation }) => {
           textColor={ColorPalette.text_black}
           icon={<AntDesign name="google" size={20} color={ColorPalette.text_black} />}
         />
-          <Text style={styles.signUpText}>Don't have an account? <Text style={styles.signUpLink} onPress={() => navigation.navigate('SignupScreen')}>Sign up</Text></Text>
       </RoundedContainer>
     </View>
   );
