@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, TextInput, Image } from 'react-native';
 import ColorPalette from '../../constants/ColorPalette';
 import UserOnlineCircle from '../../components/UserOnlineCircle';
@@ -82,7 +82,18 @@ const sections = [
     }
 ];
 
-export default function HomeScreen() {
+const HomeScreen = ({ route, navigation }) => {
+    // Get the workspace ID from navigation params
+    const { organizationId, organizationName } = route.params || {};
+    
+    useEffect(() => {
+        // Load workspace data when the screen opens
+        if (organizationId) {
+            // You can fetch additional workspace data here if needed
+            console.log(`Loading workspace: ${organizationId}`);
+        }
+    }, [organizationId]);
+
     const renderOnlineUsers = (users) => {
         return (
             <FlatList

@@ -1,114 +1,194 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useFonts } from 'expo-font';
 import { MaterialIcons } from '@expo/vector-icons/';
 import ColorPalette from '../../constants/ColorPalette';
 import RoundedContainer from '../../components/RoundedContainer';
 import CustomButton from '../../components/CustomButton';
-import { FontAwesome } from '@expo/vector-icons';
 import { AntDesign } from "@expo/vector-icons";
-import HomeScreen from '../homeScreen/HomeScreen';
+import axios from 'axios';
+import { useSelector } from 'react-redux';
+import CustomAlert from '../../components/CustomAlert';
+import { BASE_URL, ORGANIZATION_ENDPOINTS } from '../../constants/ApiConstants';
+import api from '../../services/apiService';
 
-const WorkspaceSelectionScreen = ({navigation}) => {
-  const [workspaces, setWorkspaces] = useState([]);
+const WorkspaceSelectionScreen = ({ navigation, onWorkspaceSelected }) => {
+  const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Alert state
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertType, setAlertType] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  
+  // Get auth token from Redux store
+  const { tokens } = useSelector((state) => state.auth);
+
+  const showAlert = (type, message, duration = 3000) => {
+    setAlertType(type);
+    setAlertMessage(message);
+    setAlertVisible(true);
+    
+    if (type !== 'loading') {
+      setTimeout(() => {
+        setAlertVisible(false);
+      }, duration);
+    }
+  };
 
   useEffect(() => {
-    // Simulate fetching workspaces (replace with actual API call)
-    setTimeout(() => {
-      const mockWorkspaces = [
-        { id: '1', name: 'Connectify HQ', memberCount: 15, icon: 'domain' },
-        { id: '2', name: 'Dev Team Workspace', memberCount: 8, icon: 'code' },
-        { id: '3', name: 'Design Team Workspace', memberCount: 5, icon: 'palette' },
-      ];
-      setWorkspaces(mockWorkspaces);
-      setLoading(false);
-    }, 1500);
+    fetchOrganizations();
   }, []);
 
+  const fetchOrganizations = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get(ORGANIZATION_ENDPOINTS.GET_ALL);
+      setOrganizations(response.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching organizations:', err);
+      setError('Failed to fetch workspaces');
+      showAlert('error', 'Failed to fetch workspaces. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinWorkspace = async (organization) => {
+    showAlert('loading', `Joining workspace: ${organization.name}`);
+    try {
+      const joinEndpoint = ORGANIZATION_ENDPOINTS.JOIN.replace(':id', organization.id);
+      await api.post(joinEndpoint);
+      
+      showAlert('success', `Successfully joined ${organization.name}`);
+      
+      // Save the selected workspace and store it in AsyncStorage
+      if (onWorkspaceSelected) {
+        await onWorkspaceSelected(organization.id);
+      }
+      
+      // Navigate to HomeScreen with workspace info
+      setTimeout(() => {
+        navigation.navigate('HomeScreen', { 
+          organizationId: organization.id,
+          organizationName: organization.name
+        });
+      }, 1000);
+    } catch (error) {
+      console.error('Error joining workspace:', error);
+      showAlert('error', 'Failed to join workspace. Please try again.');
+    }
+  };
+
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.workspaceItem}>
-      <View style={styles.memberPills}>
-      <MaterialIcons name={item.icon} size={24} color={ColorPalette.primary} style={styles.workspaceIcon} />
-      <View style={styles.workspaceInfo}>
-        <Text style={styles.workspaceName}>{item.name}</Text>
-        <View style={styles.memberCountContainer}>
-          <Text style={styles.memberCount}>Members: {item.memberCount}</Text>
+    <TouchableOpacity 
+      style={styles.workspaceItem}
+      onPress={() => handleJoinWorkspace(item)}
+    >
+      <View style={styles.workspaceContent}>
+        <View style={styles.iconContainer}>
+          <Text style={styles.workspaceInitial}>
+            {item.name.charAt(0)}
+          </Text>
         </View>
-      </View>
-      </View>
-      <View style={styles.buttonContainer}>
-        <CustomButton
-          title="Join"
-          onPress={() => {
-            // Handle join workspace logic here
-            alert(`Joining workspace: ${item.name}`);
-            navigation.navigate('HomeScreen');
-          }}
-          height={15}
-          width={70}
-          fontSize={12}
-        />
+
+        <View style={styles.workspaceInfo}>
+          <Text style={styles.workspaceName}>{item.name}</Text>
+          <Text style={styles.workspaceDescription}>
+            {item.description || 'No description'}
+          </Text>
+          <View style={styles.memberInfo}>
+            <MaterialIcons name="people" size={14} color={ColorPalette.grey_text} />
+            <Text style={styles.memberCount}>
+              {item.users ? `${item.users.length} members` : '0 members'}
+            </Text>
+          </View>
+        </View>
+        
+        <View style={styles.joinButtonContainer}>
+          <CustomButton
+            title="Join"
+            onPress={() => handleJoinWorkspace(item)}
+            height={36}
+            width={70}
+            fontSize={14}
+          />
+        </View>
       </View>
     </TouchableOpacity>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        
-        <RoundedContainer>
-        <Text style={styles.title}>Workspaces</Text>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={ColorPalette.green} />
-          <Text style={styles.loadingText}>Loading Workspaces...</Text>
-        </View>
-        </RoundedContainer>
-      </View>
-    );
-  }
-
-  if (!workspaces || workspaces.length === 0) {
-    return (
-      <View style={styles.container}>
-        <RoundedContainer>
-        <Text style={styles.title}>Workspaces</Text>
-          <View style={styles.centered}>
-        <MaterialIcons name="domain-disabled" size={60} color={ColorPalette.grey_text} />
-        <Text style={styles.noWorkspacesText}>No workspaces available.</Text>
-        <Text style={styles.noWorkspacesSubText}>Contact your administrator to create a workspace.</Text>
-        </View>
-        </RoundedContainer>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <RoundedContainer>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <AntDesign name="arrowleft" size={24} color={ColorPalette.green} />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <AntDesign name="arrowleft" size={22} color={ColorPalette.green} />
           </TouchableOpacity>
-          <Text style={styles.helpText}>Help</Text>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>Workspaces</Text>
+          </View>
+          <TouchableOpacity onPress={() => showAlert('info', 'Select a workspace to join and start collaborating with your team.')} style={styles.helpButton}>
+            <Text style={styles.helpText}>Help</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.title}>Workspaces</Text>
 
-      
-        <View style={styles.workspaceContainer}>
-          <Text style={styles.header}>Select a Workspace</Text>
-          <Text style={styles.description}>Choose a workspace to join and start collaborating with your team.</Text>
-          <FlatList
-            data={workspaces}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            style={styles.list}
-            showsVerticalScrollIndicator={false} // Hide vertical scroll indicator
-          />
-          
-        </View>
- 
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={ColorPalette.green} />
+            <Text style={styles.loadingText}>Loading workspaces...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.centered}>
+            <MaterialIcons name="error-outline" size={60} color={ColorPalette.error} />
+            <Text style={styles.errorText}>{error}</Text>
+            <CustomButton
+              title="Retry"
+              onPress={fetchOrganizations}
+              height={40}
+              width={120}
+              fontSize={16}
+              style={styles.retryButton}
+            />
+          </View>
+        ) : organizations.length > 0 ? (
+          <View style={styles.workspaceListContainer}>
+            <Text style={styles.listHeader}>Available Workspaces</Text>
+            <Text style={styles.listDescription}>Select a workspace to continue</Text>
+            <View style={styles.divider} />
+            <FlatList
+              data={organizations}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id.toString()}
+              style={styles.list}
+              showsVerticalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+            />
+          </View>
+        ) : (
+          <View style={styles.centered}>
+            <MaterialIcons name="workspaces-outline" size={60} color={ColorPalette.grey_text} />
+            <Text style={styles.noWorkspacesText}>No workspaces available</Text>
+            <Text style={styles.noWorkspacesSubText}>You're not a member of any workspace yet.</Text>
+            <CustomButton
+              title="Create Workspace"
+              onPress={() => navigation.navigate('CreateWorkspaceScreen')}
+              height={40}
+              width={180}
+              fontSize={16}
+              style={styles.createButton}
+            />
+          </View>
+        )}
       </RoundedContainer>
+      
+      {/* Custom Alert */}
+      <CustomAlert 
+        visible={alertVisible}
+        type={alertType}
+        message={alertMessage}
+      />
     </View>
   );
 };
@@ -120,131 +200,153 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: ColorPalette.green,
   },
-  workspaceContainer: {
-
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: ColorPalette.light_bg,
-    padding: 20,
-    marginTop: 50,
-    borderRadius: 20,
-    borderWidth: 0.5,
-    borderColor: ColorPalette.grey_light,
-    maxHeight: 400,
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+    marginBottom: 10,
+  },
+  backButton: {
+    padding: 5,
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   title: {
     fontSize: 20,
     color: ColorPalette.text_black,
     fontFamily: 'CG-Semibold',
-    textAlign: 'center',
-    marginTop: 20,
   },
-  header: {
-    fontSize: 20,
-    fontFamily: 'CG-Medium',
-    color: ColorPalette.primary,
-    marginBottom: 20,
+  helpButton: {
+    padding: 5,
+  },
+  helpText: {
+    fontSize: 14,
+    color: ColorPalette.green,
+    fontFamily: 'CG-Regular',
+  },
+  workspaceListContainer: {
+    paddingVertical: 15,
+  },
+  listHeader: {
+    fontSize: 18,
+    fontFamily: 'CG-Semibold',
+    color: ColorPalette.text_black,
+    marginBottom: 5,
+    paddingHorizontal: 10,
+  },
+  listDescription: {
+    fontSize: 14,
+    fontFamily: 'CG-Regular',
+    color: ColorPalette.grey_text,
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: ColorPalette.grey_light,
+    marginVertical: 10,
   },
   list: {
     width: '100%',
-    overflowY: 'hidden',
+    paddingHorizontal: 10,
+  },
+  itemSeparator: {
+    height: 1,
+    backgroundColor: ColorPalette.grey_light,
+    opacity: 0.5,
   },
   workspaceItem: {
-    flexDirection: 'row', // Arrange items horizontally
-    justifyContent: 'space-between', // Push button to the right
-    alignItems: 'center', // Align items vertically in the center
-    backgroundColor: ColorPalette.light_bg,
-    padding: 15,
-    borderRadius: 10,
-    marginVertical: 5,
-    borderWidth: 0.5,
-    borderColor: ColorPalette.grey_light,
+    paddingVertical: 15,
+    paddingHorizontal: 5,
+  },
+  workspaceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: ColorPalette.green,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  workspaceInitial: {
+    fontSize: 20,
+    color: ColorPalette.white,
+    fontFamily: 'CG-Semibold',
   },
   workspaceInfo: {
-    flexDirection: 'column', // Stack name and member count vertically
-    alignItems: 'flex-start',
-    maxWidth: '70%', // Adjust as needed
-    marginLeft: 10, // Add some space between the icon and the text
-  },
-  workspaceIcon: {
-    marginRight: 0, // Remove margin from the icon
+    flex: 1,
   },
   workspaceName: {
     fontSize: 16,
     fontFamily: 'CG-Semibold',
-    color: ColorPalette.text_dark,
-    textAlign: 'left',
-    flexWrap: 'wrap',
-    marginBottom: 5, // Add some space between the name and member count
+    color: ColorPalette.text_black,
+    marginBottom: 2,
   },
-  buttonContainer: {
-  },
-  memberCountContainer: {
-    width: '100%',
-    alignItems: 'flex-start',
-  },
-  memberCount: {
+  workspaceDescription: {
     fontSize: 14,
     fontFamily: 'CG-Regular',
-    color: ColorPalette.green,
-    textAlign: 'left',
+    color: ColorPalette.grey_text,
+    marginBottom: 5,
   },
-  memberPills: {
+  memberInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    width:'auto '
   },
-  memberIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: ColorPalette.white,
-    borderWidth: 1,
-    borderColor: ColorPalette.grey_light,
-    justifyContent: 'center',
-    alignItems: 'center',
+  memberCount: {
+    fontSize: 13,
+    fontFamily: 'CG-Regular',
+    color: ColorPalette.grey_text,
     marginLeft: 5,
   },
-  noWorkspacesText: {
-    fontSize: 20,
-    fontFamily: 'CG-Semibold',
+  joinButtonContainer: {
+    marginLeft: 10,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: 'CG-Medium',
     color: ColorPalette.grey_text,
+    marginTop: 15,
+  },
+  errorText: {
+    fontSize: 16,
+    fontFamily: 'CG-Regular',
+    color: ColorPalette.error,
     marginTop: 10,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 15,
+  },
+  noWorkspacesText: {
+    fontSize: 18,
+    fontFamily: 'CG-Semibold',
+    color: ColorPalette.text_black,
+    marginTop: 15,
     textAlign: 'center',
   },
   noWorkspacesSubText: {
     fontSize: 14,
     fontFamily: 'CG-Regular',
     color: ColorPalette.grey_text,
-    marginTop: 5,
-    textAlign: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    fontFamily: 'CG-Medium',
-    color: ColorPalette.primary,
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  centered: {
-    flex:1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  description: { // Add description style
-    fontSize: 14,
-    fontFamily: 'CG-Regular',
-    color: ColorPalette.grey_text,
-    textAlign: 'center',
+    marginTop: 8,
     marginBottom: 20,
-  },
-  helpText: {
-    fontSize: 14,
-    marginTop: 20,
-    color: ColorPalette.text_black,
-    fontFamily: 'CG-Regular',
     textAlign: 'center',
-    paddingBottom: 20,
+  },
+  createButton: {
+    marginTop: 10,
   },
 });
 
