@@ -118,7 +118,6 @@ const LoginScreen = ({ navigation }) => {
           placeholder="Email or Username"
           onChangeText={setEmail}
           value={email}
-          autoCapitalize="none"
         />
         <CustomInput
           placeholder="Password"

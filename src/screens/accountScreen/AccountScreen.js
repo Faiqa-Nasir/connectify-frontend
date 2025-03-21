@@ -1,8 +1,34 @@
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Animated } from 'react-native';
-import React, { useState, useContext } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Animated, Image } from 'react-native';
+import React, { useState, useContext, useEffect } from 'react';
 import ColorPallete from '../../constants/ColorPalette';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AccountScreen({ navigation }) {
+  const [userData, setUserData] = useState(null);
+  const [orgData, setOrgData] = useState(null);
+  
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userJSON = await AsyncStorage.getItem('user');
+        const orgJSON = await AsyncStorage.getItem('organization');
+        
+        if (userJSON) {
+          console.log('User data:', JSON.parse(userJSON));
+          setUserData(JSON.parse(userJSON));
+        }
+        
+        if (orgJSON) {
+          setOrgData(JSON.parse(orgJSON));
+        }
+      } catch (error) {
+        console.error('Error fetching data from localStorage:', error);
+      }
+    };
+    
+    fetchUserData();
+  }, []);
+
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
@@ -10,6 +36,36 @@ export default function AccountScreen({ navigation }) {
         <Text style={styles.heading}>My Account</Text>
       </View>
 
+      {/* User Profile Info */}
+      <View style={styles.profileContainer}>
+        <View style={styles.avatarContainer}>
+          {userData?.profileImage ? (
+            <Image 
+              source={{ uri: userData.profileImage }} 
+              style={styles.avatar} 
+            />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarText}>
+                {userData?.first_name?.charAt(0) || userData?.email?.charAt(0) || '?'}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.profileInfo}>
+          <Text style={styles.userName}>
+            {userData ? `${userData.first_name} ${userData.last_name}` : 'User Name'}
+          </Text>
+          <Text style={styles.userEmail}>{userData?.email || 'email@example.com'}</Text>
+          <Text style={styles.userDetail}>Username: {userData?.username || 'Not specified'}</Text>
+          <Text style={styles.userDetail}>Role: {userData?.role || 'Not specified'}</Text>
+          {orgData && (
+            <Text style={styles.organization}>
+              Organization: {orgData.name || 'Not specified'}
+            </Text>
+          )}
+        </View>
+      </View>
    
       {/* Other Options */}
       <TouchableOpacity style={styles.optionItem}>
@@ -42,7 +98,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 24,
-    marginBottom: 32,
+    marginBottom: 16,
   },
   backButton: {
     padding: 8,
@@ -52,6 +108,66 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginLeft: 16,
+  },
+  profileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  avatarContainer: {
+    marginRight: 16,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  avatarPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: ColorPallete.main_black_2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: ColorPallete.text_black,
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: ColorPallete.text_black,
+    opacity: 0.8,
+    marginBottom: 4,
+  },
+  organization: {
+    fontSize: 14,
+    color: ColorPallete.text_black,
+    opacity: 0.8,
+  },
+  userDetail: {
+    fontSize: 14,
+    color: ColorPallete.text_black,
+    opacity: 0.8,
+    marginBottom: 4,
   },
   optionItem: {
     paddingVertical: 16,

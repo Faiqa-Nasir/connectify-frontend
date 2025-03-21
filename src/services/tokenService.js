@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {jwtDecode} from 'jwt-decode';
-import { AUTH_ENDPOINTS } from '../constants/ApiConstants';
+import jwtDecode from 'jwt-decode';
+import { AUTH_ENDPOINTS, BASE_URL } from '../constants/ApiConstants';
 import axios from 'axios';
 
 /**
@@ -114,5 +114,22 @@ export const getTokenExpiration = (token) => {
   } catch (error) {
     console.error('Error getting token expiration:', error);
     return null;
+  }
+};
+
+/**
+ * Check if valid tokens exist in AsyncStorage
+ * @returns {Promise<boolean>}
+ */
+export const hasValidTokens = async () => {
+  try {
+    const tokens = await getStoredTokens();
+    if (!tokens || !tokens.access) return false;
+    
+    // Check if access token is not expired
+    return !isTokenExpired(tokens.access);
+  } catch (error) {
+    console.error('Error checking for valid tokens:', error);
+    return false;
   }
 };

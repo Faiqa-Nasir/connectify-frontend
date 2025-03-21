@@ -60,9 +60,10 @@ const authSlice = createSlice({
         refresh: null
       };
       
-      // Remove tokens from AsyncStorage
+      // Remove tokens and workspace data from AsyncStorage
       removeTokens();
       AsyncStorage.removeItem('rememberedEmail');
+      AsyncStorage.removeItem('selectedWorkspace'); // Clear workspace data on logout
     },
     updateTokens: (state, action) => {
       state.tokens = action.payload;

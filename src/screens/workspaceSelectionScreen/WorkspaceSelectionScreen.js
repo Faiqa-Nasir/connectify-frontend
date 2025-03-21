@@ -58,8 +58,7 @@ const WorkspaceSelectionScreen = ({ navigation, onWorkspaceSelected }) => {
   const handleJoinWorkspace = async (organization) => {
     showAlert('loading', `Joining workspace: ${organization.name}`);
     try {
-      const joinEndpoint = ORGANIZATION_ENDPOINTS.JOIN.replace(':id', organization.id);
-      await api.post(joinEndpoint);
+      // No need to call the join endpoint - removed API call
       
       showAlert('success', `Successfully joined ${organization.name}`);
       
@@ -68,16 +67,22 @@ const WorkspaceSelectionScreen = ({ navigation, onWorkspaceSelected }) => {
         await onWorkspaceSelected(organization.id);
       }
       
-      // Navigate to HomeScreen with workspace info
+      // Navigate to HomeScreen with correct screen name
       setTimeout(() => {
-        navigation.navigate('HomeScreen', { 
-          organizationId: organization.id,
-          organizationName: organization.name
+        navigation.navigate('Main', { 
+          screen: 'Home',
+          params: {
+            screen: 'HomeScreen',
+            params: {
+              organizationId: organization.id,
+              organizationName: organization.name
+            }
+          }
         });
       }, 1000);
     } catch (error) {
-      console.error('Error joining workspace:', error);
-      showAlert('error', 'Failed to join workspace. Please try again.');
+      console.error('Error selecting workspace:', error);
+      showAlert('error', 'Failed to select workspace. Please try again.');
     }
   };
 

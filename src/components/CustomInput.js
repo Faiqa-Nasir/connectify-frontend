@@ -22,6 +22,7 @@ const CustomInput = ({ placeholder, secureTextEntry, onChangeText }) => {
         secureTextEntry={secureTextEntry && isPasswordVisible}
         onChangeText={onChangeText}
         placeholderTextColor={ColorPalette.text_light}
+        autoCapitalize='none'
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
