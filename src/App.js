@@ -1,33 +1,16 @@
 import React, { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { restoreToken, updateTokens, logout } from './redux/authSlice';
-import { getStoredTokens } from './services/tokenService';
+import { updateTokens, logout } from './redux/authSlice';
 
 const App = () => {
   const dispatch = useDispatch();
   
   useEffect(() => {
-    const loadStoredCredentials = async () => {
-      try {
-        const [userString, tokens] = await Promise.all([
-          AsyncStorage.getItem('user'),
-          getStoredTokens()
-        ]);
-        
-        if (userString && tokens) {
-          const user = JSON.parse(userString);
-          dispatch(restoreToken({ user, tokens }));
-        }
-      } catch (e) {
-        console.error('Failed to load auth state:', e);
-      }
-    };
-    
-    loadStoredCredentials();
+    // Note: Token restoration is now handled in Navigator component's bootstrap
     
     // Listen for token refresh events from apiService
     const handleTokenRefreshed = (event) => {
+      console.log('Token refreshed event received:', event.detail);
       dispatch(updateTokens(event.detail));
     };
     
@@ -36,14 +19,22 @@ const App = () => {
       dispatch(logout());
     };
     
+    // Listen for explicit logout events
+    const handleAuthLogout = () => {
+      console.log('Auth logout event received');
+      dispatch(logout());
+    };
+    
     // Add event listeners
     window.addEventListener('token-refreshed', handleTokenRefreshed);
     window.addEventListener('auth-error', handleAuthError);
+    window.addEventListener('auth-logout', handleAuthLogout);
     
     // Clean up event listeners when component unmounts
     return () => {
       window.removeEventListener('token-refreshed', handleTokenRefreshed);
       window.removeEventListener('auth-error', handleAuthError);
+      window.removeEventListener('auth-logout', handleAuthLogout);
     };
   }, [dispatch]);
   
