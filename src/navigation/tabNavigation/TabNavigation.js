@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeStack from '../homeStack/HomeStack.js';
 import MessagingStack from '../messagingStack/MessagingStack';
 import TrendsStack from '../trendsStack/TrendsStack';
-import AccountStack from '../accountStack/AccountStack';
+import ProfileStack from '../profileStack/ProfileStack';
 import NoticeBoardStack from '../noticeBoardStack/NoticeBoardStack';
 import ColorPalette from '../../constants/ColorPalette.js';
 
@@ -21,7 +21,7 @@ export default function TabNavigation() {
                         if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
                         else if (route.name === 'Messaging') iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
                         else if (route.name === 'Trends') iconName = focused ? 'trending-up' : 'trending-up-outline';
-                        else if (route.name === 'Account') iconName = focused ? 'person' : 'person-outline';
+                        else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
                         else if (route.name === 'NoticeBoard') iconName = focused ? 'notifications' : 'notifications-outline';
 
                         return <Ionicons name={iconName} size={size} color={color} />;
@@ -39,7 +39,7 @@ export default function TabNavigation() {
                 <Tab.Screen name="Messaging" component={MessagingStack} />
                 <Tab.Screen name="Trends" component={TrendsStack} />
                 <Tab.Screen name="NoticeBoard" component={NoticeBoardStack} />
-                <Tab.Screen name="Account" component={AccountStack} />
+                <Tab.Screen name="Profile" component={ProfileStack} />
             </Tab.Navigator>
         </SafeAreaView>
     );

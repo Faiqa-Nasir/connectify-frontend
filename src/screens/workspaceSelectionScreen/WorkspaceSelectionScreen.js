@@ -62,9 +62,9 @@ const WorkspaceSelectionScreen = ({ navigation, onWorkspaceSelected }) => {
       
       showAlert('success', `Successfully joined ${organization.name}`);
       
-      // Save the selected workspace and store it in AsyncStorage
+      // Pass the entire organization object instead of just the ID
       if (onWorkspaceSelected) {
-        await onWorkspaceSelected(organization.id);
+        await onWorkspaceSelected(organization);
       }
       
       // Navigate to HomeScreen with correct screen name

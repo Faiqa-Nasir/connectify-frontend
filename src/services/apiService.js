@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { BASE_URL } from '../constants/ApiConstants';
-import { isTokenExpired, refreshTokenAPI, getStoredTokens } from './tokenService';
+import { isTokenExpired, getStoredTokens, storeTokens } from './tokenService';
+import { refreshTokenAPI, logout } from './authService';
 
 // Create axios instance with base URL
 const api = axios.create({
@@ -8,6 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // Increased global timeout from 15000 to 30000 (30 seconds)
 });
 
 // Flag to track if we're refreshing a token
@@ -29,14 +31,31 @@ const processQueue = (error, token = null) => {
 };
 
 // Function to refresh the token and get a new access token
-const refreshAccessToken = async (refreshToken) => {
+export const refreshAccessToken = async (refreshToken) => {
   try {
+    console.log('Attempting to refresh access token');
     const newTokens = await refreshTokenAPI(refreshToken);
     
-    // Dispatch is now handled in the refresh token function
+    // Store the refreshed tokens
+    await storeTokens(newTokens);
+    
+    console.log('Access token refreshed and stored successfully');
     return newTokens;
   } catch (error) {
     console.error('Error in refreshAccessToken:', error);
+    
+    // If refresh fails due to invalid refresh token, trigger logout
+    if (error.message.includes('Authentication expired') || 
+        error.message.includes('invalid or expired')) {
+      console.log('Token refresh failed, triggering logout');
+      
+      if (window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('auth-logout', { 
+          detail: { message: 'Session expired. Please login again.' } 
+        }));
+      }
+      await logout();
+    }
     throw error;
   }
 };
@@ -51,9 +70,10 @@ api.interceptors.request.use(
       if (tokens?.access) {
         // Check if token is expired
         const needsRefresh = isTokenExpired(tokens.access);
+        console.log(`Token needs refresh: ${needsRefresh}, isRefreshing: ${isRefreshing}`);
         
         // If the access token is expired and not already refreshing, refresh it
-        if (needsRefresh && !isRefreshing) {
+        if (needsRefresh && !isRefreshing && tokens?.refresh) {
           isRefreshing = true;
           
           try {
@@ -75,7 +95,7 @@ api.interceptors.request.use(
           } catch (error) {
             processQueue(error, null);
             
-            // Emit logout event if refresh failed
+            // Emit auth error event if refresh failed
             if (window.dispatchEvent) {
               window.dispatchEvent(new CustomEvent('auth-error', { 
                 detail: { message: 'Token refresh failed' } 
@@ -86,6 +106,18 @@ api.interceptors.request.use(
           } finally {
             isRefreshing = false;
           }
+        } else if (needsRefresh && !tokens?.refresh) {
+          // If token expired and no refresh token available, trigger logout
+          console.log('Token expired and no refresh token available, triggering logout');
+          
+          if (window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('auth-logout', { 
+              detail: { message: 'Session expired. Please login again.' } 
+            }));
+          }
+          
+          await logout();
+          return Promise.reject(new Error('Session expired. Please login again.'));
         } else {
           // Token is valid or we're already refreshing, set the Authorization header
           config.headers.Authorization = `Bearer ${tokens.access}`;
@@ -107,6 +139,23 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    
+    // Handle specific error messages from the server
+    if (error.response?.data?.error === "Token is invalid or expired") {
+      console.log("Server reported token is invalid or expired");
+      
+      // If already retrying, don't try again to prevent infinite loops
+      if (originalRequest._retry) {
+        // Force logout as our refresh attempt failed
+        if (window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('auth-logout', { 
+            detail: { message: 'Session expired. Please login again.' } 
+          }));
+        }
+        await logout();
+        return Promise.reject(error);
+      }
+    }
     
     // If the error is not 401 or the request has already been retried, reject
     if (!error.response || error.response.status !== 401 || originalRequest._retry) {
