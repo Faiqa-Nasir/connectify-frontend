@@ -9,7 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // Global timeout of 15 seconds
+  timeout: 30000, // Increased global timeout from 15000 to 30000 (30 seconds)
 });
 
 // Flag to track if we're refreshing a token
@@ -31,7 +31,7 @@ const processQueue = (error, token = null) => {
 };
 
 // Function to refresh the token and get a new access token
-const refreshAccessToken = async (refreshToken) => {
+export const refreshAccessToken = async (refreshToken) => {
   try {
     console.log('Attempting to refresh access token');
     const newTokens = await refreshTokenAPI(refreshToken);

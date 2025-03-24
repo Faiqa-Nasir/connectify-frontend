@@ -8,8 +8,9 @@ import AuthStack from './authStack/AuthStack';
 import WorkspaceSelectionScreen from "../screens/workspaceSelectionScreen/WorkspaceSelectionScreen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ColorPalette from "../constants/ColorPalette";
-import { hasValidTokens } from "../services/tokenService";
+import { hasValidTokens, getStoredTokens } from "../services/tokenService";
 import { restoreToken } from "../redux/authSlice";
+import { refreshAccessToken } from "../services/apiService"; // Import the existing refreshAccessToken function
 
 const Stack = createStackNavigator();
 
@@ -50,6 +51,45 @@ export default function Navigator() {
                         }
                     }
                 }
+                else {
+                    // Try to refresh the token if validation fails
+                    try {
+                        // Get stored tokens
+                        const tokens = await getStoredTokens();
+                        
+                        // Only attempt refresh if we have a refresh token
+                        if (tokens && tokens.refresh) {
+                            console.log("Attempting to refresh token during bootstrap");
+                            // Use the existing refreshAccessToken function instead of directly calling the API
+                            const newTokens = await refreshAccessToken(tokens.refresh);
+                            
+                            // Get user data to restore authentication state
+                            const userString = await AsyncStorage.getItem('user');
+                            
+                            if (userString) {
+                                const user = JSON.parse(userString);
+                                dispatch(restoreToken({ user, tokens: newTokens }));
+                                
+                                // Check for selected workspace
+                                const selectedWorkspace = await AsyncStorage.getItem('selectedWorkspace');
+                                console.log("Selected workspace from storage after token refresh:", selectedWorkspace);
+                                
+                                if (selectedWorkspace) {
+                                    setHasWorkspace(true);
+                                }
+                            }
+                            
+                            console.log("Token refreshed successfully during bootstrap");
+                        } else {
+                            console.log("No refresh token available, cannot refresh");
+                        }
+                    } catch (refreshError) {
+                        console.error("Failed to refresh token during bootstrap:", refreshError);
+                        // Reset auth state since refresh failed
+                        await AsyncStorage.removeItem('tokens');
+                        await AsyncStorage.removeItem('user');
+                    }
+                }
             } catch (error) {
                 console.error('Error during app bootstrap:', error);
             } finally {
@@ -83,10 +123,11 @@ export default function Navigator() {
     }, [isAuthenticated]);
     
     // Function to set selected workspace (to be called after joining a workspace)
-    const setSelectedWorkspace = async (workspaceId) => {
+    const setSelectedWorkspace = async (workspace) => {
         try {
-            await AsyncStorage.setItem('selectedWorkspace', workspaceId.toString());
-            console.log("Saved workspace to storage:", workspaceId.toString());
+            // Store the entire workspace object instead of just the ID
+            await AsyncStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
+            console.log("Saved workspace to storage:", workspace);
             setHasWorkspace(true);
         } catch (error) {
             console.error('Error saving selected workspace:', error);

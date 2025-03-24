@@ -1,53 +1,57 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import React, { memo } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import ColorPalette from '../constants/ColorPalette';
 
 const UserOnlineCircle = ({ user }) => {
     return (
-        <View style={styles.container}>
+        <TouchableOpacity style={styles.container}>
             <View style={styles.imageContainer}>
                 <Image source={{ uri: user.profileImage }} style={styles.image} />
                 <View style={styles.onlineIndicator} />
             </View>
-            <Text style={styles.username}>{user.username.length > 10 ? user.username.substring(0, 10) + '...' : user.username}</Text>
-        </View>
+            <Text style={styles.username} numberOfLines={1}>
+                {user.username}
+            </Text>
+        </TouchableOpacity>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
-        marginRight: 15,
+        marginHorizontal: 8,
+        width: 60,
     },
     imageContainer: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        borderWidth: 2,
-        borderColor: ColorPalette.gradient_text,
-        overflow: 'hidden',
+        position: 'relative',
+        marginBottom: 4,
     },
     image: {
-        width: '100%',
-        height: '100%',
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        borderWidth: 2,
+        borderColor: ColorPalette.green,
     },
     onlineIndicator: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        width: 15,
-        height: 15,
-        borderRadius: 7.5,
-        backgroundColor: ColorPalette.gradient_text,
-        borderWidth: 1,
-        borderColor: ColorPalette.white,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#4CAF50',
+        borderWidth: 2,
+        borderColor: ColorPalette.main_black,
     },
     username: {
-        marginTop: 5,
         color: ColorPalette.white,
         fontSize: 12,
-        fontFamily: 'CG-Light',
+        textAlign: 'center',
+        width: 60,
+        fontFamily: 'CG-Regular',
     },
 });
 
-export default UserOnlineCircle;
+// Export as memoized component to prevent unnecessary re-renders
+export default memo(UserOnlineCircle);
