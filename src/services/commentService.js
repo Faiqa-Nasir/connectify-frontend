@@ -1,6 +1,5 @@
 import api from './apiService';
 import { COMMENT_ENDPOINTS } from '../constants/ApiConstants';
-import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
@@ -13,13 +12,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  */
 export const createComment = async (postId, content, parentCommentId = null, retryCount = 0) => {
   try {
-    // Check internet connectivity first
-    const netInfoState = await NetInfo.fetch();
-    
-    if (!netInfoState.isConnected) {
-      throw new Error('No internet connection. Please check your network settings and try again.');
-    }
-    
     const payload = {
       content,
       parent_comment_id: parentCommentId
@@ -53,13 +45,8 @@ export const createComment = async (postId, content, parentCommentId = null, ret
   } catch (error) {
     console.error('Error creating comment:', error);
     
-    // Check if it's a timeout or network error
-    const isNetworkError = error.message === 'Network Error' || 
-                           error.code === 'ECONNABORTED' || 
-                           error.message.includes('timeout');
-    
     // Retry logic for network errors (max 2 attempts)
-    if (isNetworkError && retryCount < 2) {
+    if (error.message === 'Network Error' && retryCount < 2) {
       console.log(`Retrying create comment (attempt ${retryCount + 1})...`);
       
       // Exponential backoff delay: 1s, 2s
@@ -72,7 +59,7 @@ export const createComment = async (postId, content, parentCommentId = null, ret
     
     // Format error message for the UI
     let errorMessage;
-    if (isNetworkError) {
+    if (error.message === 'Network Error') {
       errorMessage = 'Network connection issue. Please check your internet connection and try again.';
     } else if (error.response) {
       // Server responded with an error status code
@@ -129,13 +116,6 @@ export const fetchComments = async (postId, page = 1, pageSize = 10, useCache = 
       }
     }
     
-    // Check internet connectivity
-    const netInfoState = await NetInfo.fetch();
-    
-    if (!netInfoState.isConnected) {
-      throw new Error('No internet connection. Please check your network settings and try again.');
-    }
-    
     console.log(`Fetching comments for post ${postId}, page ${page}`);
     
     const response = await api.get(COMMENT_ENDPOINTS.GET_COMMENTS(postId), {
@@ -161,13 +141,8 @@ export const fetchComments = async (postId, page = 1, pageSize = 10, useCache = 
   } catch (error) {
     console.error('Error fetching comments:', error);
     
-    // Check if it's a timeout or network error
-    const isNetworkError = error.message === 'Network Error' || 
-                          error.code === 'ECONNABORTED' || 
-                          error.message.includes('timeout');
-    
     // Retry logic for network errors (max 2 attempts)
-    if (isNetworkError && retryCount < 2) {
+    if (error.message === 'Network Error' && retryCount < 2) {
       console.log(`Retrying fetch comments (attempt ${retryCount + 1})...`);
       
       // Exponential backoff delay: 1s, 2s
@@ -180,7 +155,7 @@ export const fetchComments = async (postId, page = 1, pageSize = 10, useCache = 
     
     // Format error message for the UI
     let errorMessage;
-    if (isNetworkError) {
+    if (error.message === 'Network Error') {
       errorMessage = 'Network connection issue. Please check your internet connection and try again.';
     } else if (error.response) {
       // Server responded with an error status code
@@ -211,13 +186,6 @@ export const fetchComments = async (postId, page = 1, pageSize = 10, useCache = 
  */
 export const fetchReplies = async (commentId, page = 1, pageSize = 10, retryCount = 0) => {
   try {
-    // Check internet connectivity
-    const netInfoState = await NetInfo.fetch();
-    
-    if (!netInfoState.isConnected) {
-      throw new Error('No internet connection. Please check your network settings and try again.');
-    }
-    
     console.log(`Fetching replies for comment ${commentId}, page ${page}`);
     
     const response = await api.get(COMMENT_ENDPOINTS.GET_REPLIES(commentId), {
@@ -232,13 +200,8 @@ export const fetchReplies = async (commentId, page = 1, pageSize = 10, retryCoun
   } catch (error) {
     console.error('Error fetching replies:', error);
     
-    // Check if it's a timeout or network error
-    const isNetworkError = error.message === 'Network Error' || 
-                          error.code === 'ECONNABORTED' || 
-                          error.message.includes('timeout');
-    
     // Retry logic for network errors (max 2 attempts)
-    if (isNetworkError && retryCount < 2) {
+    if (error.message === 'Network Error' && retryCount < 2) {
       console.log(`Retrying fetch replies (attempt ${retryCount + 1})...`);
       
       // Exponential backoff delay: 1s, 2s
@@ -251,7 +214,7 @@ export const fetchReplies = async (commentId, page = 1, pageSize = 10, retryCoun
     
     // Format error message for the UI
     let errorMessage;
-    if (isNetworkError) {
+    if (error.message === 'Network Error') {
       errorMessage = 'Network connection issue. Please check your internet connection and try again.';
     } else if (error.response) {
       // Server responded with an error status code
@@ -281,13 +244,6 @@ export const fetchReplies = async (commentId, page = 1, pageSize = 10, retryCoun
  */
 export const updateComment = async (commentId, content, retryCount = 0) => {
   try {
-    // Check internet connectivity
-    const netInfoState = await NetInfo.fetch();
-    
-    if (!netInfoState.isConnected) {
-      throw new Error('No internet connection. Please check your network settings and try again.');
-    }
-    
     console.log(`Updating comment ${commentId} with content: ${content}`);
     
     // Add explicit JSON content type header
@@ -307,13 +263,8 @@ export const updateComment = async (commentId, content, retryCount = 0) => {
     console.error('Error updating comment:', error);
     console.error('Error details:', error.response?.data || 'No response data');
     
-    // Check if it's a timeout or network error
-    const isNetworkError = error.message === 'Network Error' || 
-                          error.code === 'ECONNABORTED' || 
-                          error.message.includes('timeout');
-    
     // Retry logic for network errors (max 2 attempts)
-    if (isNetworkError && retryCount < 2) {
+    if (error.message === 'Network Error' && retryCount < 2) {
       console.log(`Retrying update comment (attempt ${retryCount + 1})...`);
       
       // Exponential backoff delay: 1s, 2s
@@ -326,7 +277,7 @@ export const updateComment = async (commentId, content, retryCount = 0) => {
     
     // Format error message for the UI
     let errorMessage;
-    if (isNetworkError) {
+    if (error.message === 'Network Error') {
       errorMessage = 'Network connection issue. Please check your internet connection and try again.';
     } else if (error.response) {
       // Server responded with an error status code
@@ -357,13 +308,6 @@ export const updateComment = async (commentId, content, retryCount = 0) => {
  */
 export const deleteComment = async (commentId, retryCount = 0) => {
   try {
-    // Check internet connectivity
-    const netInfoState = await NetInfo.fetch();
-    
-    if (!netInfoState.isConnected) {
-      throw new Error('No internet connection. Please check your network settings and try again.');
-    }
-    
     console.log(`Deleting comment ${commentId}`);
     
     // Add explicit Accept header
@@ -399,13 +343,8 @@ export const deleteComment = async (commentId, retryCount = 0) => {
     console.error('Error deleting comment:', error);
     console.error('Error details:', error.response?.data || 'No response data');
     
-    // Check if it's a timeout or network error
-    const isNetworkError = error.message === 'Network Error' || 
-                           error.code === 'ECONNABORTED' || 
-                           error.message.includes('timeout');
-    
     // Retry logic for network errors (max 2 attempts)
-    if (isNetworkError && retryCount < 2) {
+    if (error.message === 'Network Error' && retryCount < 2) {
       console.log(`Retrying delete comment (attempt ${retryCount + 1})...`);
       
       // Exponential backoff delay: 1s, 2s
@@ -418,7 +357,7 @@ export const deleteComment = async (commentId, retryCount = 0) => {
     
     // Format error message for the UI
     let errorMessage;
-    if (isNetworkError) {
+    if (error.message === 'Network Error') {
       errorMessage = 'Network connection issue. Please check your internet connection and try again.';
     } else if (error.response) {
       // Server responded with an error status code

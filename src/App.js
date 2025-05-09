@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { updateTokens, logout } from './redux/authSlice';
-import NetInfo from '@react-native-community/netinfo';
 
 const App = () => {
   const dispatch = useDispatch();
@@ -39,22 +38,6 @@ const App = () => {
     };
   }, [dispatch]);
 
-  useEffect(() => {
-    // Subscribe to network state updates
-    const unsubscribe = NetInfo.addEventListener(state => {
-      if (state.isConnected) {
-        // Connection restored - hide banner, retry pending operations
-      } else {
-        // Connection lost - show banner
-      }
-    });
-
-    // Cleanup on unmount
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-  
   // ...existing code...
 };
 

@@ -4,14 +4,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
   ScrollView,
   ActivityIndicator,
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  FlatList
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,11 +23,10 @@ import MediaPreview from './components/MediaPreview';
 import LoadingOverlay from '../../components/LoadingOverlay';
 import UserSearchModal from './components/UserSearchModal';
 import ScreenLayout from '../../components/layout/ScreenLayout';
-import { transformPost } from '../../utils/postTransformUtils';
 import { useNavigation } from '@react-navigation/native';
-import NetInfo from '@react-native-community/netinfo';
 import { fetchUserData } from '../../utils/userUtils';
-
+import * as FileSystem from 'expo-file-system';
+import { processMediaFile, prepareMediaFormData,validateMediaFile } from '../../utils/mediaUtils';
 const CreatePostScreen = ({ navigation, route }) => {
   // Content state
   const [content, setContent] = useState('');
@@ -186,72 +184,8 @@ const CreatePostScreen = ({ navigation, route }) => {
     
     return true;
   }, [content, currentWorkspace]);
-  
-  // Function to prepare post data
-  const preparePostData = useCallback(async () => {
-    // Create form data for multipart request with media
-    const formData = new FormData();
-    
-    // Add post data
-    formData.append('content', content);
-    formData.append('organization_id', currentWorkspace.id);
-    formData.append('ispublic', isPublic);
-    
-    // Handle tagged users properly
-    if (taggedUsers.length > 0) {
-      const taggedUserIds = taggedUsers.map(user => user.id);
-      formData.append('tagged_user_ids', JSON.stringify(taggedUserIds));
-    }
-    
-    // Add media files
-    for (const [index, file] of mediaFiles.entries()) {
-      const fileUri = Platform.OS === 'ios' ? file.uri.replace('file://', '') : file.uri;
-      const fileType = file.type || (file.uri.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg');
-      const fileName = file.fileName || `file_${index}.${fileType.split('/')[1]}`;
 
-      // Log each file being added
-      console.log(`Adding media file ${index + 1}:`, {
-        uri: fileUri,
-        type: fileType,
-        name: fileName
-      });
 
-      try {
-        const response = await fetch(fileUri);
-        const blob = await response.blob();
-
-        // Append the media file as a Blob
-        formData.append('media', blob, fileName);
-      } catch (error) {
-        console.error('Error creating blob:', error);
-        Alert.alert('Error', 'Failed to process media file. Please try again.');
-        return null;
-      }
-    }
-    
-    // Log FormData keys for debugging
-    const formDataKeys = [];
-    // @ts-ignore
-    for (let [key, value] of formData._parts) {
-      formDataKeys.push(`${key}: ${typeof value === 'object' ? 'File object' : value}`);
-    }
-    console.log('FormData contents:', formDataKeys);
-    
-    return formData;
-  }, [content, currentWorkspace, isPublic, taggedUsers, mediaFiles]);
-  
-
-  // Check network status
-  const checkNetworkStatus = useCallback(async () => {
-    try {
-      const netInfo = await NetInfo.fetch();
-      return netInfo.isConnected && netInfo.isInternetReachable;
-    } catch (error) {
-      console.error('Error checking network status:', error);
-      return false;
-    }
-  }, []);
-  
   // Submit the post to the API
   const handleSubmitPost = useCallback(async () => {
     if (!validatePost()) {
@@ -261,95 +195,44 @@ const CreatePostScreen = ({ navigation, route }) => {
     setIsSubmitting(true);
     setErrorMessage('');
     
-    // Remove the local post creation since we don't want temp posts
-    // const localPost = await createLocalPost();
-    
-    // Prepare post data
-    const formData = await preparePostData();
-    if (!formData) {
-      setIsSubmitting(false);
-      return;
-    }
-    
-    // Check network status
-    const isNetworkAvailable = await checkNetworkStatus();
-    if (!isNetworkAvailable) {
-      // Store the post data for later upload
-      const uploadQueue = await AsyncStorage.getItem('postUploadQueue');
-      const queue = uploadQueue ? JSON.parse(uploadQueue) : [];
-      queue.push({
-        formData: JSON.stringify(formData),
-        timestamp: new Date().toISOString(),
-        attempts: 0
-      });
-      await AsyncStorage.setItem('postUploadQueue', JSON.stringify(queue));
-      
-      // Make sure to close the loading dialog
-      setIsSubmitting(false);
-      
-      // Inform user and navigate away
-      Alert.alert(
-        'Post Queued',
-        'Your post will be uploaded when network connection is restored.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Profile', { refresh: true }) }]
-      );
-      return;
-    }
-    
-    // For large files or slow connections, offer background upload
-    const shouldUseBackgroundUpload = mediaFiles.length > 0;
-    
-    if (shouldUseBackgroundUpload) {
-      // Close loading dialog since we're moving to background uploads
-      setIsSubmitting(false);
-      
-      // Navigate to profile immediately and tell it to refresh from API
-      navigation.navigate('Profile', { refresh: true });
-      
-      // Continue upload in background
-      setIsBackgroundUpload(true);
-      Alert.alert(
-        'Uploading in Background',
-        'Your post is being uploaded. You will be notified when it\'s complete.',
-        [{ text: 'OK' }]
-      );
-      
-      // Start background upload
-      backgroundUpload(formData);
-    } else {
-      try {
-        // For simple posts without media, upload normally
-        await createPost(formData, 0, (progress) => {
-          setUploadProgress(progress);
-        });
-        
-        // Make sure to close loading dialog
-        setIsSubmitting(false);
-        
-        // Navigate to profile on success with refresh flag
-        navigation.navigate('Profile', { refresh: true });
-      } catch (error) {
-        console.error('Error creating post:', error);
-        setErrorMessage(error.message || 'Failed to create post. Please try again.');
-        
-        // Make sure to close loading dialog on error
-        setIsSubmitting(false);
-        
-        Alert.alert(
-          'Error',
-          error.message || 'Failed to create post. Please try again.',
-          [{ text: 'OK' }]
-        );
+    try {
+      // Step 1: Process and validate each media file
+      const processedFiles = [];
+      for (const media of mediaFiles) {
+        const processed = await processMediaFile(media);
+        validateMediaFile(processed);
+        processedFiles.push(processed);
       }
+
+      // Step 2: Prepare FormData
+      const formData = new FormData();
+      formData.append('content', content);
+      formData.append('organization_id', currentWorkspace?.id || currentWorkspace);
+      formData.append('ispublic', isPublic);
+
+      if (taggedUsers.length > 0) {
+        const taggedUserIds = taggedUsers.map((user) => user.id);
+        formData.append('tagged_user_ids', JSON.stringify(taggedUserIds));
+      }
+
+      prepareMediaFormData(formData, processedFiles);
+      // Step 3: Upload using fetch
+      const response = await createPost(formData, 0, (progress) => {
+        setUploadProgress(progress);
+      });
+
+      const data = await response;
+      console.log('Upload Success:', data);
+
+      // Navigate to profile on success with refresh flag
+      navigation.navigate('Profile', { refresh: true });
+    } catch (error) {
+      console.error('Upload Failed:', error);
+      setErrorMessage(error.message || 'Failed to create post. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [
-    validatePost, 
-    preparePostData, 
-    mediaFiles.length, 
-    navigation, 
-    checkNetworkStatus, 
-    backgroundUpload
-  ]);
+  }, [validatePost, content, currentWorkspace, isPublic, taggedUsers, mediaFiles, navigation]);
   
   // Background upload function
   const backgroundUpload = useCallback(async (formData) => {

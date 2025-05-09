@@ -1,4 +1,4 @@
-export const BASE_URL = 'http://192.168.1.8:8000'; // Replace with your actual API base URL
+export const BASE_URL = 'http://192.168.1.11:8000'; // Replace with your actual API base URL
 
 export const AUTH_ENDPOINTS = {
   LOGIN: '/api/auth/login/',
@@ -19,6 +19,7 @@ export const POST_ENDPOINTS = {
   USER_POSTS: '/api/posts/user/',
   USER_POSTS_BY_ID: (userId) => `/api/posts/user/${userId}/`,
   DELETE: (postId) => `/api/posts/${postId}/delete/`,
+  TRENDS: '/api/posts/trends/',
 };
 
 export const COMMENT_ENDPOINTS = {
