@@ -1,7 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwtDecode from 'jwt-decode';
-import { AUTH_ENDPOINTS, BASE_URL } from '../constants/ApiConstants';
-import axios from 'axios';
 
 /**
  * Check if the access token is expired
@@ -27,34 +25,34 @@ export const isTokenExpired = (token) => {
 };
 
 /**
- * Directly refresh token through API call
- * @param {string} refreshToken - The refresh token to use
- * @returns {Promise<{access: string, refresh: string}>} - New tokens
- */
-export const refreshTokenAPI = async (refreshToken) => {
-  try {
-    const response = await axios.post(BASE_URL + AUTH_ENDPOINTS.REFRESH, {
-      refresh: refreshToken
-    });
-    
-    return {
-      access: response.data.access,
-      refresh: response.data.refresh || refreshToken
-    };
-  } catch (error) {
-    console.error('Error refreshing token:', error);
-    throw error;
-  }
-};
-
-/**
- * Get stored tokens from AsyncStorage
+ * Get stored tokens from AsyncStorage with fallback to individual keys
  * @returns {Promise<{access: string, refresh: string}|null>}
  */
 export const getStoredTokens = async () => {
   try {
+    // First try to get tokens from the 'tokens' key
     const tokensString = await AsyncStorage.getItem('tokens');
-    return tokensString ? JSON.parse(tokensString) : null;
+    if (tokensString) {
+      return JSON.parse(tokensString);
+    }
+    
+    // If not found, try individual keys (backward compatibility)
+    const accessToken = await AsyncStorage.getItem('access_token');
+    const refreshToken = await AsyncStorage.getItem('refresh_token');
+    
+    if (accessToken) {
+      const tokens = {
+        access: accessToken,
+        refresh: refreshToken || null
+      };
+      
+      // Store in the combined format for future use
+      await storeTokens(tokens);
+      
+      return tokens;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error getting stored tokens:', error);
     return null;

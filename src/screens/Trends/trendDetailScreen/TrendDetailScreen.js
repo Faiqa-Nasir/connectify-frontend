@@ -1,109 +1,148 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, Modal, Pressable } from 'react-native';
-import { Ionicons, Feather, AntDesign } from '@expo/vector-icons';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import PeopleList from '../../../components/peopleList/PeopleList';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { View, Text, TouchableOpacity, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
+import { AntDesign } from '@expo/vector-icons';
+import Post from '../../../components/Post';
 import ColorPalette from '../../../constants/ColorPalette';
+import ScreenLayout from '../../../components/layout/ScreenLayout';
 import { styles } from './styles';
+import { transformPost } from '../../../utils/postTransformUtils';
+import { fetchTrendPosts } from '../../../services/postService';
 
-const TABS = ['Top', 'Latest', 'People', 'Media'];
+const TABS = ['Top', 'Latest', 'Media'];
 
-const POSTS_DATA = [
-  {
-    id: '1',
-    name: 'Komol Kuchkarov',
-    username: '@kkuchkarov',
-    avatar: 'https://via.placeholder.com/48',
-    timestamp: '6d',
-    content: 'When we first launched #SQUID, we set a goal to double our downloads by the end of 2019. We hit 47K+ downloads!',
-    images: ['https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-KHlJ2SMTId6saFtOYLZWXWoEJ8i0fi.png'],
-  },
-];
+export default function TrendDetailScreen({ route, navigation }) {
+  const { trend, initialPosts = [], refresh = false } = route.params; // Receive the refresh parameter
+  const [activeTab, setActiveTab] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [allPosts, setAllPosts] = useState(initialPosts);
+  const [loading, setLoading] = useState(refresh); // Add loading state
 
-const PEOPLE_DATA = [
-  { id: '1', name: 'Alice Johnson', username: '@alice_j', avatar: 'https://via.placeholder.com/48' },
-  { id: '2', name: 'Bob Smith', username: '@bobsmith', avatar: 'https://via.placeholder.com/48' },
-];
-
-export default function TrendDetailScreen({ route }) {
-  const [activeTab, setActiveTab] = useState(0); // Index-based tabs
-  const [liked, setLiked] = useState(false);
-  const [commentsVisible, setCommentsVisible] = useState(false);
-
-  const toggleLike = () => setLiked(!liked);
-
-  const handleSwipe = ({ nativeEvent }) => {
-    if (nativeEvent.translationX < -20) {
-      // Swipe left
-      setActiveTab(prev => (prev < TABS.length - 1 ? prev + 1 : prev));
-    } else if (nativeEvent.translationX > 20) {
-      // Swipe right
-      setActiveTab(prev => (prev > 0 ? prev - 1 : prev));
+  // Fetch trend posts if refresh is true
+  useEffect(() => {
+    if (refresh) {
+      handleRefresh();
     }
+  }, [refresh]);
+
+  // Transform and sort initial posts
+  const sortedPosts = useMemo(() => {
+    // Transform posts first
+    const transformedPosts = allPosts.map(post => transformPost(post));
+
+    if (!transformedPosts?.length) return { top: [], latest: [], media: [] };
+
+    // Filter media posts
+    const withMedia = transformedPosts.filter(post => post.media?.length > 0);
+    
+    // Sort by likes/engagement
+    const sortedByLikes = [...transformedPosts].sort((a, b) => {
+      const aEngagement = (a.likes || 0) + (a.comments || 0);
+      const bEngagement = (b.likes || 0) + (b.comments || 0);
+      return bEngagement - aEngagement;
+    });
+
+    // Sort by date
+    const sortedByDate = [...transformedPosts].sort((a, b) => 
+      new Date(b.created_at) - new Date(a.created_at)
+    );
+
+    return {
+      top: sortedByLikes,
+      latest: sortedByDate,
+      media: withMedia
+    };
+  }, [allPosts]);
+
+  const handleRefresh = useCallback(async () => {
+    setLoading(true); // Show loader
+    setRefreshing(true);
+    try {
+      const response = await fetchTrendPosts(trend);
+      setAllPosts(response.results || []);
+    } catch (error) {
+      console.error('Error refreshing trend posts:', error);
+    } finally {
+      setRefreshing(false);
+      setLoading(false); // Hide loader
+    }
+  }, [trend]);
+
+  // Get current tab posts with memoization
+  const getCurrentPosts = useCallback(() => {
+    const posts = sortedPosts[activeTab === 0 ? 'top' : activeTab === 1 ? 'latest' : 'media'];
+    return posts || [];
+  }, [activeTab, sortedPosts]);
+
+  const renderContent = () => {
+    const currentPosts = getCurrentPosts();
+    
+    return (
+      <View style={styles.contentContainer}>
+        {currentPosts.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <AntDesign name="folder1" size={48} color={ColorPalette.text_gray} />
+            <Text style={styles.emptyText}>
+              No {TABS[activeTab].toLowerCase()} posts found for #{trend}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={currentPosts}
+            renderItem={({ item }) => (
+              <Post 
+                post={item}
+                navigation={navigation}
+                showActions={true}
+                isDetailView={false}
+              />
+            )}
+            keyExtractor={item => `${trend}-${activeTab}-${item.id}`}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={ColorPalette.gradient_text}
+                colors={[ColorPalette.gradient_text]}
+              />
+            }
+          />
+        )}
+      </View>
+    );
   };
 
-  const renderPost = ({ item }) => (
-    <View style={styles.postContainer}>
-      <View style={styles.header}>
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
-        <View style={styles.userInfo}>
-          <Text style={styles.name}>{item.name}</Text>
-          <Text style={styles.username}>{item.username}</Text>
+  if (loading && refreshing) {
+    return (
+      <ScreenLayout backgroundColor={ColorPalette.dark_bg} statusBarStyle="light-content">
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={ColorPalette.gradient_text} />
         </View>
-        <Text style={styles.timestamp}>{item.timestamp}</Text>
-      </View>
-      <Text style={styles.content}>{item.content}</Text>
-      {item.images.length > 0 && <Image source={{ uri: item.images[0] }} style={styles.singleImage} />}
-      <View style={styles.actions}>
-        <TouchableOpacity onPress={toggleLike}>
-          <AntDesign name={liked ? 'heart' : 'hearto'} size={20} color={liked ? 'red' : '#aaa'} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setCommentsVisible(true)}>
-          <Feather name="message-circle" size={20} color="#aaa" style={styles.iconSpacing} />
-        </TouchableOpacity>
-        <Feather name="repeat" size={20} color="#aaa" style={styles.iconSpacing} />
-      </View>
-    </View>
-  );
+      </ScreenLayout>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.tabs}>
-        {TABS.map((tab, index) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, activeTab === index && styles.activeTab]}
-            onPress={() => setActiveTab(index)}
-          >
-            <Text style={[styles.tabText, activeTab === index && styles.activeTabText]}>{tab}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Swipeable Content */}
-      <PanGestureHandler
-        onGestureEvent={handleSwipe}
-        activeOffsetX={[-10, 10]} // Adjust for sensitivity
-        minDeltaX={10} // Minimum horizontal distance to detect a swipe
-        minVelocityX={0.1} // Minimum velocity to detect a swipe
-      >
-        <View style={styles.contentContainer}>
-          {activeTab === 2 && <PeopleList data={PEOPLE_DATA} />}
-          {activeTab === 3 && (
-            <FlatList data={POSTS_DATA} renderItem={({ item }) => <Image source={{ uri: item.images[0] }} style={styles.gridImage} />} numColumns={3} keyExtractor={item => item.id} />
-          )}
-          {activeTab !== 2 && activeTab !== 3 && <FlatList data={POSTS_DATA} renderItem={renderPost} keyExtractor={item => item.id} />}
+    <ScreenLayout backgroundColor={ColorPalette.dark_bg} statusBarStyle="light-content">
+      <View style={styles.container}>
+        <View style={styles.tabs}>
+          {TABS.map((tab, index) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab]}
+              onPress={() => setActiveTab(index)}
+            >
+              <Text style={[styles.tabText, activeTab === index && styles.activeTabText]}>
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </PanGestureHandler>
-
-      {/* Comments Modal */}
-      <Modal visible={commentsVisible} animationType="slide" transparent>
-        <Pressable style={styles.modalOverlay} onPress={() => setCommentsVisible(false)}>
-          <View style={styles.commentsContainer}>
-            <Text style={styles.commentText}>Comments</Text>
-          </View>
-        </Pressable>
-      </Modal>
-    </View>
+        <View style={styles.contentContainer}>
+          {renderContent()}
+        </View>
+      </View>
+    </ScreenLayout>
   );
 }

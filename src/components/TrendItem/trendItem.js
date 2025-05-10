@@ -6,17 +6,14 @@ import ColorPalette from '../../constants/ColorPalette';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-export default function TrendItem({ hashtag, posts }) {
+export default function TrendItem({ hashtag, posts, onPress, index }) {
   const navigation = useNavigation();
 
-  const handlePress = () => {
-    navigation.navigate('TrendsDetailScreen', {
-      trend: hashtag,
-    });
-  };
-
   return (
-    <TouchableOpacity style={styles.container} onPress={handlePress}>
+    <TouchableOpacity style={styles.container} onPress={onPress}>
+      <View style={styles.indexContainer}>
+        <Text style={styles.indexText}>{index + 1}</Text>
+      </View>
       <View style={styles.content}>
         <Text style={styles.hashtag}>{hashtag}</Text>
 
@@ -30,7 +27,7 @@ export default function TrendItem({ hashtag, posts }) {
           />
         </MaskedView>
       </View>
-      <Feather name="more-vertical" size={20} color={ColorPalette.text_gray} />
+      <Feather name="chevron-right" size={20} color={ColorPalette.text_gray} />
     </TouchableOpacity>
   );
 }
@@ -44,9 +41,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     paddingHorizontal: 16,
     borderBottomColor: ColorPalette.card_bg,
+    
+  },
+  indexContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: ColorPalette.card_bg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  indexText: {
+    color: ColorPalette.text_white,
+    fontSize: 14,
+    fontFamily: 'CG-Medium',
   },
   content: {
     flex: 1,
+    marginLeft: 8,
   },
   hashtag: {
     color: ColorPalette.text_white,
@@ -55,11 +68,12 @@ const styles = StyleSheet.create({
   },
   postsMask: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: 'semibold',
     backgroundColor: 'transparent',
+    marginTop: 4,
   },
   gradientText: {
-    height: 18, // Match text height
+    height: 22, // Match text height
     width: '100%', // Make sure gradient covers text width
   },
 });

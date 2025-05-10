@@ -99,5 +99,11 @@ const authSlice = createSlice({
   }
 });
 
+// Add a logoutUser action to the authSlice if it doesn't exist already
+export const logoutUser = () => (dispatch) => {
+  // Simply dispatch the logout action
+  dispatch({ type: 'auth/logout' });
+};
+
 export const { login, logout, updateTokens, setAuthError, clearAuthError, restoreToken } = authSlice.actions;
 export default authSlice.reducer;

@@ -1,21 +1,48 @@
-import * as React from 'react';
+import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import HomeScreen from '../../screens/homeScreen/HomeScreen';
+import CreatePostScreen from '../../screens/createPostScreen/CreatePostScreen';
 import ColorPalette from '../../constants/ColorPalette';
+import TrendsDetailScreen from '../../screens/Trends/trendDetailScreen/TrendDetailScreen';
 
 const Stack = createStackNavigator();
 
-export default function HomeStack() {
-    return (
-        <Stack.Navigator
-            screenOptions={{
-                headerShown: false, // This hides the header for all screens in this stack
-            }}
-        >
-            <Stack.Screen 
-                name="HomeScreen" // Changed from "Home" to "HomeScreen" to avoid naming conflict
-                component={HomeScreen}
-            />
-        </Stack.Navigator>
-    );
-}
+const HomeStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: ColorPalette.main_black,
+        },
+        headerTintColor: ColorPalette.white,
+        headerTitleStyle: {
+          fontFamily: 'CG-Medium',
+        },
+      }}
+    >
+      <Stack.Screen 
+        name="Feed" 
+        component={HomeScreen} 
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="CreatePost" 
+        component={CreatePostScreen}
+        options={{ 
+          headerShown: false,
+          presentation: 'modal'
+        }}
+      />
+      <Stack.Screen
+      name="TrendDetailsScreen"
+      component={TrendsDetailScreen}
+      options={{
+        headerShown: false,
+        presentation: 'modal',
+      }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+export default HomeStack;
