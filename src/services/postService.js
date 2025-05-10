@@ -318,3 +318,86 @@ export const getTimeAgo = (dateString) => {
 
   return seconds < 10 ? 'just now' : `${Math.floor(seconds)} seconds ago`;
 };
+
+/**
+ * Fetch trending hashtags and their associated posts
+ * @param {number} retryCount - Number of retry attempts (internal use)
+ * @returns {Promise} - Promise resolving to the trending data
+ */
+export const fetchTrends = async (retryCount = 0) => {
+  try {
+    const response = await api.get(POST_ENDPOINTS.TRENDS, {
+      timeout: 15000,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching trends:', error);
+
+    const isNetworkError =
+      error.message === 'Network Error' ||
+      error.code === 'ECONNABORTED' ||
+      error.message.includes('timeout');
+
+    if (isNetworkError && retryCount < 2) {
+      console.log(`Retrying fetch trends (attempt ${retryCount + 1})...`);
+      const delay = Math.pow(2, retryCount) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchTrends(retryCount + 1);
+    }
+
+    let errorMessage = 'Failed to fetch trends.';
+    if (error.response?.status === 401) {
+      errorMessage = 'Please login to view trends.';
+    } else if (isNetworkError) {
+      errorMessage = 'Network connection issue. Please check your internet connection.';
+    }
+
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Fetch posts for a specific trend/hashtag
+ * @param {string} hashtag - The hashtag to fetch posts for
+ * @param {number} page - Page number to fetch
+ * @param {number} pageSize - Number of posts per page
+ * @param {number} retryCount - Number of retry attempts (internal use)
+ * @returns {Promise} - Promise resolving to the paginated trend posts
+ */
+export const fetchTrendPosts = async (hashtag, page = 1, pageSize = 10, retryCount = 0) => {
+  try {
+    const response = await api.get(POST_ENDPOINTS.TREND_POSTS(hashtag), {
+      params: {
+        page,
+        page_size: pageSize,
+      },
+      timeout: 15000,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching trend posts:', error);
+
+    const isNetworkError =
+      error.message === 'Network Error' ||
+      error.code === 'ECONNABORTED' ||
+      error.message.includes('timeout');
+
+    if (isNetworkError && retryCount < 2) {
+      const delay = Math.pow(2, retryCount) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchTrendPosts(hashtag, page, pageSize, retryCount + 1);
+    }
+
+    if (error.response?.status === 404) {
+      throw new Error('This trend could not be found.');
+    }
+
+    throw new Error(
+      isNetworkError
+        ? 'Network connection issue. Please check your internet connection.'
+        : error.response?.data?.error || 'Failed to load trend posts.'
+    );
+  }
+};

@@ -3,6 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import HomeScreen from '../../screens/homeScreen/HomeScreen';
 import CreatePostScreen from '../../screens/createPostScreen/CreatePostScreen';
 import ColorPalette from '../../constants/ColorPalette';
+import TrendsDetailScreen from '../../screens/Trends/trendDetailScreen/TrendDetailScreen';
 
 const Stack = createStackNavigator();
 
@@ -31,6 +32,14 @@ const HomeStack = () => {
           headerShown: false,
           presentation: 'modal'
         }}
+      />
+      <Stack.Screen
+      name="TrendDetailsScreen"
+      component={TrendsDetailScreen}
+      options={{
+        headerShown: false,
+        presentation: 'modal',
+      }}
       />
     </Stack.Navigator>
   );

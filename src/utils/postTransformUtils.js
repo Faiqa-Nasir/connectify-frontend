@@ -49,11 +49,15 @@ export const transformPost = (apiPost) => {
       caption: apiPost.content || apiPost.caption || '',
       media: mediaUrls,
       mediaDetails: apiPost.media || [],
-      likes: apiPost.reaction_count || apiPost.likes || 0,
-      comments: apiPost.comment_count || apiPost.comments || 0,
-      shares: apiPost.share_count || apiPost.shares || 0,
-      timeAgo: apiPost.created_at ? getTimeAgo(apiPost.created_at) : (apiPost.timeAgo || 'recently'),
+      likes: apiPost.reactions_summary ? Object.values(apiPost.reactions_summary).reduce((a, b) => a + b, 0) : 0,
+      comments: apiPost.comment_count || 0,
+      shares: apiPost.share_count || 0,
+      timeAgo: apiPost.created_at ? getTimeAgo(apiPost.created_at) : 'recently',
       hashtags: apiPost.hashtags ? apiPost.hashtags.map(tag => tag.name) : [],
+      reactions_summary: apiPost.reactions_summary || {},
+      reaction_count: apiPost.reactions_summary ? 
+        Object.values(apiPost.reactions_summary).reduce((a, b) => a + b, 0) : 0,
+      user_reaction: determineUserReaction(apiPost.reactions_summary)
     };
   } catch (error) {
     console.error('Error transforming post:', error);
@@ -70,8 +74,31 @@ export const transformPost = (apiPost) => {
       shares: 0,
       timeAgo: 'recently',
       hashtags: [],
+      reaction_count: 0,
+      reactions_summary: {},
+      user_reaction: null
     };
   }
+};
+
+// Update the helper function to better determine user's reaction
+const determineUserReaction = (reactionsSummary) => {
+  if (!reactionsSummary || typeof reactionsSummary !== 'object') return null;
+  
+  // Get the first reaction type that has a count
+  const reactionType = Object.entries(reactionsSummary)[0]?.[0];
+  if (!reactionType) return null;
+
+  const reactionMap = {
+    'LIKE': { id: 1, name: 'LIKE', emoji: '👍', type: 'LIKE' },
+    'LOVE': { id: 2, name: 'LOVE', emoji: '❤️', type: 'LOVE' },
+    'HAHA': { id: 3, name: 'HAHA', emoji: '😂', type: 'HAHA' },
+    'WOW': { id: 4, name: 'WOW', emoji: '😮', type: 'WOW' },
+    'SAD': { id: 5, name: 'SAD', emoji: '😢', type: 'SAD' },
+    'ANGRY': { id: 6, name: 'ANGRY', emoji: '😠', type: 'ANGRY' }
+  };
+
+  return reactionMap[reactionType] || null;
 };
 
 /**

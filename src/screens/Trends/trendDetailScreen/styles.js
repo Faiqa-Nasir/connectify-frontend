@@ -2,25 +2,90 @@ import { StyleSheet } from 'react-native';
 import ColorPalette from '../../../constants/ColorPalette';
 
 export const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: ColorPalette.bg },
-    tabs: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#333' },
-    tab: { paddingVertical: 8 },
-    activeTab: { borderBottomWidth: 2, borderBottomColor: '#fff' },
-    tabText: { color: '#aaa', fontSize: 16, fontWeight: 'bold' },
-    activeTabText: { color: '#fff' },
-    postContainer: { paddingHorizontal: 10, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#333' },
-    header: { flexDirection: 'row', alignItems: 'center' },
-    userInfo: { flex: 1, marginLeft: 12 },
-    avatar: { width: 40, height: 40, borderRadius: 20 },
-    name: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-    username: { color: '#888', fontSize: 13 },
-    content: { color: '#fff', fontSize: 14, marginVertical: 8 },
-    singleImage: { width: '100%', height: 180, borderRadius: 12, marginBottom: 8 },
-    actions: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-    iconSpacing: { marginLeft: 12 },
-    timestamp: { color: '#888', fontSize: 12 },
-    gridImage: { width: '32.5%', height: 120, margin: '0.5%', borderRadius: 8 },
-    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-    commentsContainer: { backgroundColor: '#222', padding: 20, borderTopLeftRadius: 15, borderTopRightRadius: 15 },
-    commentText: { color: '#fff', fontSize: 16, textAlign: 'center' },
+  container: {
+    flex: 1,
+    backgroundColor: ColorPalette.dark_bg,
+  },
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: ColorPalette.green,
+    paddingVertical: 0,
+    borderBottomWidth: 1.0,
+    borderBottomColor: ColorPalette.white,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 16,
+    position: 'relative',
+    alignItems: 'center',
+  },
+  activeTab: {
+    position: 'relative',
+  },
+  tabText: {
+    color: ColorPalette.white,
+    fontSize: 15,
+    fontFamily: 'CG-Regular',
+  },
+  activeTabText: {
+    color: ColorPalette.gradient_text,
+    fontFamily: 'CG-Medium',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: '25%',
+    right: '25%',
+    height: 3,
+    backgroundColor: ColorPalette.gradient_text,
+    borderRadius: 3,
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  listContent: {
+    paddingBottom: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    color: ColorPalette.text_gray,
+    fontSize: 16,
+    fontFamily: 'CG-Regular',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: ColorPalette.text_white,
+    fontSize: 16,
+    fontFamily: 'CG-Regular',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: ColorPalette.gradient_text,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    color: ColorPalette.text_white,
+    fontFamily: 'CG-Medium',
+    fontSize: 14,
+  }
 });

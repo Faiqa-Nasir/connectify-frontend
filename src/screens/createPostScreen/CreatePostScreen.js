@@ -224,8 +224,14 @@ const CreatePostScreen = ({ navigation, route }) => {
       const data = await response;
       console.log('Upload Success:', data);
 
-      // Navigate to profile on success with refresh flag
-      navigation.navigate('Profile', { refresh: true });
+      // Navigate directly to HomeScreen with refresh flag instead of Profile
+      navigation.navigate('Home', { refreshFeed: true });
+      // Clear the create post screen from navigation stack
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home', params: { refreshFeed: true } }],
+      });
+
     } catch (error) {
       console.error('Upload Failed:', error);
       setErrorMessage(error.message || 'Failed to create post. Please try again.');
@@ -348,13 +354,7 @@ const CreatePostScreen = ({ navigation, route }) => {
         </View>
         
         <ScrollView style={styles.scrollContainer}>
-          {/* Workspace info */}
-          <View style={styles.workspaceContainer}>
-            <Ionicons name="briefcase-outline" size={18} color={ColorPalette.green} />
-            <Text style={styles.workspaceText}>
-              Posting to: {currentWorkspace ? currentWorkspace.name : 'Loading workspace...'}
-            </Text>
-          </View>
+        
           
           {/* Error message if any */}
           {errorMessage ? (
@@ -406,14 +406,6 @@ const CreatePostScreen = ({ navigation, route }) => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.taggedUsersList}
               />
-            </View>
-          )}
-          
-          {/* Hashtags section */}
-          {hashtags.length > 0 && (
-            <View style={styles.hashtagsContainer}>
-              <Text style={styles.sectionTitle}>Hashtags:</Text>
-              <HashtagsInput hashtags={hashtags} />
             </View>
           )}
           
@@ -586,6 +578,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     minHeight: 120,
     textAlignVertical: 'top',
+    marginTop: 8,
   },
   mediaLoadingContainer: {
     flexDirection: 'row',

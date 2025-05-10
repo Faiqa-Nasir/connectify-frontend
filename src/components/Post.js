@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, memo, useMemo, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions, FlatList } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions, FlatList, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Video } from 'expo-av';
 import ColorPalette from '../constants/ColorPalette';
@@ -14,6 +14,8 @@ import OptionsMenu from './common/OptionsMenu';
 import { fetchUserData } from '../utils/userUtils';
 import CustomAlert from './CustomAlert';
 import ConfirmationAlert from './ConfirmationAlert';
+import { getReactionTypes, reactToPost, removeReaction } from '../services/reactionService';
+import { useNavigation } from '@react-navigation/native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -121,6 +123,7 @@ const MediaItem = memo(({ item, index, onPress, isVideo, videoRef, imageLoading,
 });
 
 const Post = ({ post, onPostDeleted }) => {
+    const navigation = useNavigation();
     const [liked, setLiked] = useState(false);
     const [bookmarked, setBookmarked] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -130,6 +133,11 @@ const Post = ({ post, onPostDeleted }) => {
     const [showOptions, setShowOptions] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [currentUserId, setCurrentUserId] = useState(null);
+    const [reactionTypes, setReactionTypes] = useState([]);
+    const [currentReaction, setCurrentReaction] = useState(post.user_reaction || null);
+    const [reactionCount, setReactionCount] = useState(post.reaction_count || 0);
+    const [reactionLoading, setReactionLoading] = useState(false);
+    const [showReactionPicker, setShowReactionPicker] = useState(false);
 
     // Custom alert state
     const [alertVisible, setAlertVisible] = useState(false);
@@ -153,6 +161,10 @@ const Post = ({ post, onPostDeleted }) => {
     const moreButtonRef = useRef(null);
     const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
 
+    // Add optimistic state
+    const [optimisticReaction, setOptimisticReaction] = useState(null);
+    const [optimisticCount, setOptimisticCount] = useState(post.reaction_count || 0);
+
     // Fetch current user data when component mounts
     useEffect(() => {
         const getUserData = async () => {
@@ -165,6 +177,27 @@ const Post = ({ post, onPostDeleted }) => {
         getUserData();
     }, []);
 
+    // Fetch reaction types when component mounts
+    useEffect(() => {
+        const loadReactionTypes = async () => {
+            try {
+                const types = await getReactionTypes();
+                setReactionTypes(types);
+            } catch (error) {
+                console.error('Error loading reaction types:', error);
+            }
+        };
+        loadReactionTypes();
+    }, []);
+
+    // Update initial states with post data
+    useEffect(() => {
+        if (post) {
+            setCurrentReaction(post.user_reaction);
+            setReactionCount(post.reaction_count || 0);
+        }
+    }, [post]);
+
     // Determine if post belongs to current user
     const isCurrentUserPost = useMemo(() => {
         return Number(post.user?.id) === currentUserId;
@@ -175,10 +208,15 @@ const Post = ({ post, onPostDeleted }) => {
         return !!post.text_category;
     }, [post.text_category]);
 
-    // Function to handle hashtag clicks
+    // Update the hashtag click handler with correct route name
     const handleHashtagPress = (hashtag) => {
-        console.log(`Hashtag pressed: ${hashtag}`);
-        // Add navigation or search functionality here
+        // Remove # symbol if present and convert to uppercase for consistency
+        const cleanHashtag = hashtag.replace('#', '').toUpperCase();
+        navigation.navigate('TrendDetailsScreen', {
+            trend: cleanHashtag,
+            initialPosts: [], // Initial posts will be loaded in TrendDetailScreen
+            refresh: true // Pass refresh parameter
+        });
     };
 
     // Function to handle mention clicks
@@ -212,6 +250,7 @@ const Post = ({ post, onPostDeleted }) => {
     }, [post?.media]);
 
     // Open media viewer with a specific media item - memoized for performance
+    
     const openMediaViewer = useCallback((index) => {
         setSelectedMediaIndex(index);
         setMediaViewerVisible(true);
@@ -414,6 +453,110 @@ const Post = ({ post, onPostDeleted }) => {
         return options;
     }, [isCurrentUserPost, handleDeletePost, isDeleting]);
 
+    // Handle reaction with optimistic update
+    const handleReaction = async (reactionTypeId) => {
+        if (reactionLoading) return;
+        
+        setReactionLoading(true);
+        
+        // Get reaction details for optimistic update
+        const newReaction = reactionTypes.find(r => r.id === reactionTypeId);
+        
+        // Store previous state for rollback
+        const previousReaction = currentReaction;
+        const previousCount = reactionCount;
+        
+        try {
+            if (currentReaction?.id === reactionTypeId) {
+                // Remove reaction if clicking the same one
+                setCurrentReaction(null);
+                setReactionCount(prev => Math.max(0, prev - 1));
+                setShowReactionPicker(false);
+                
+                await removeReaction(post.id);
+            } else {
+                // Add or change reaction
+                setCurrentReaction(newReaction);
+                setReactionCount(prev => !currentReaction ? prev + 1 : prev);
+                setShowReactionPicker(false);
+
+                const response = await reactToPost(post.id, reactionTypeId);
+                
+                if (!response.isOptimistic) {
+                    setCurrentReaction({
+                        id: reactionTypeId,
+                        name: response.reaction_type,
+                        emoji: response.emoji,
+                        type: response.reaction_type
+                    });
+                }
+            }
+        } catch (error) {
+            // Rollback on error
+            setCurrentReaction(previousReaction);
+            setReactionCount(previousCount);
+            showAlert('error', error.message);
+        } finally {
+            setReactionLoading(false);
+        }
+    };
+
+    // Get the appropriate icon based on reaction type
+    const getReactionIcon = useCallback(() => {
+        if (!currentReaction) return "heart-outline";
+        
+        // Map reaction types to icons
+        const iconMap = {
+            like: "heart",
+            love: "heart",
+            haha: "happy",
+            wow: "surprise",
+            sad: "sad",
+            angry: "flame"
+        };
+
+        return iconMap[currentReaction.type] || "heart";
+    }, [currentReaction]);
+
+    // Replace the reaction button render function
+    const renderReactionButton = () => (
+        <View style={styles.reactionWrapper}>
+            <TouchableOpacity 
+                onLongPress={() => setShowReactionPicker(true)}
+                onPress={() => handleReaction(1)}
+                style={styles.actionButton}
+                disabled={reactionLoading}
+            >
+                <Ionicons 
+                    name={getReactionIcon()} 
+                    size={20} 
+                    color={currentReaction ? "#FF6B6B" : ColorPalette.grey_text} 
+                />
+                <Text style={styles.actionText}>{reactionCount}</Text>
+            </TouchableOpacity>
+
+            {/* Reaction Picker Modal */}
+            {showReactionPicker && (
+                <View style={styles.reactionPicker}>
+                    <View style={styles.reactionPickerContent}>
+                        {reactionTypes.map((type) => (
+                            <TouchableOpacity
+                                key={type.id}
+                                onPress={() => handleReaction(type.id)}
+                                style={[
+                                    styles.reactionItem,
+                                    currentReaction?.id === type.id && styles.selectedReactionItem
+                                ]}
+                            >
+                                <Text style={styles.reactionEmoji}>{type.emoji}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+            )}
+        </View>
+    );
+
     // If post data is missing or invalid, don't render anything
     if (!post || !post.user) {
         return null;
@@ -547,6 +690,8 @@ const Post = ({ post, onPostDeleted }) => {
 
             {/* Actions Bar */}
             <View style={styles.actionsBar}>
+                {renderReactionButton()}
+                
                 <TouchableOpacity 
                     onPress={() => setCommentsVisible(true)} 
                     style={styles.actionButton}
@@ -554,26 +699,7 @@ const Post = ({ post, onPostDeleted }) => {
                     <Ionicons name="chatbubble-outline" size={20} color={ColorPalette.grey_text} />
                     <Text style={styles.actionText}>{post.comments || 0}</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
-                    style={styles.actionButton} 
-                    onPress={() => setSendModalVisible(true)}
-                >
-                    <Ionicons name="repeat-outline" size={20} color={ColorPalette.grey_text} />
-                    <Text style={styles.actionText}>{post.shares || 0}</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                    onPress={() => setLiked(!liked)} 
-                    style={styles.actionButton}
-                >
-                    <Ionicons 
-                        name={liked ? "heart" : "heart-outline"} 
-                        size={20} 
-                        color={liked ? "#FF6B6B" : ColorPalette.grey_text} 
-                    />
-                    <Text style={styles.actionText}>{post.likes || 0}</Text>
-                </TouchableOpacity>
+        
                 
                 <TouchableOpacity 
                     onPress={() => setBookmarked(!bookmarked)}
@@ -586,7 +712,8 @@ const Post = ({ post, onPostDeleted }) => {
                     />
                 </TouchableOpacity>
                 
-                <TouchableOpacity style={styles.actionButton}>
+                <TouchableOpacity style={styles.actionButton}
+                                    onPress={() => setSendModalVisible(true)}>
                     <Ionicons name="share-outline" size={20} color={ColorPalette.grey_text} />
                 </TouchableOpacity>
             </View>
@@ -782,17 +909,20 @@ const styles = StyleSheet.create({
     actionsBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
         marginTop: 12,
         paddingHorizontal: 16,
+        height: 40, // Fixed height for consistency
     },
     actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 6,
+        minWidth: 40, // Minimum width for touch target
     },
     actionText: {
         color: ColorPalette.grey_text,
-        marginLeft: 6,
+        marginLeft: 4, // Reduced from 6
         fontSize: 13,
         fontFamily: 'CG-Regular',
     },
@@ -825,11 +955,46 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontFamily: 'CG-Medium',
     },
-    
-    // We can remove these styles since they're now in the reusable component
-    // deletingOverlay, deletingText, optionsMenu, optionItem, optionText
-    
-    // ...existing code...
+    reactionWrapper: {
+        position: 'relative',
+        zIndex: 1,
+    },
+    reactionPicker: {
+        position: 'absolute',
+        bottom: 45,
+        left: -10,
+        backgroundColor: ColorPalette.card_bg,
+        borderRadius: 16,
+        paddingVertical: 6,
+        paddingHorizontal: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        width: 'auto',
+    },
+    reactionPickerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+    },
+    reactionItem: {
+        padding: 4,
+        marginHorizontal: 2,
+        borderRadius: 12,
+        backgroundColor: 'transparent',
+        minWidth: 32,
+        height: 32,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    selectedReactionItem: {
+        backgroundColor: ColorPalette.green + '20',
+    },
+    reactionEmoji: {
+        fontSize: 18, // Reduced from 20
+    },
 });
 
 // Export as memoized component to prevent unnecessary re-renders

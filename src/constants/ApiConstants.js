@@ -20,6 +20,7 @@ export const POST_ENDPOINTS = {
   USER_POSTS_BY_ID: (userId) => `/api/posts/user/${userId}/`,
   DELETE: (postId) => `/api/posts/${postId}/delete/`,
   TRENDS: '/api/posts/trends/',
+  TREND_POSTS: (hashtag) => `/api/posts/trend/${hashtag}/`,
 };
 
 export const COMMENT_ENDPOINTS = {
@@ -28,6 +29,12 @@ export const COMMENT_ENDPOINTS = {
   GET_REPLIES: (commentId) => `/api/posts/comments/${commentId}/replies/`,
   UPDATE: (commentId) => `/api/posts/comments/${commentId}/update/`,
   DELETE: (commentId) => `/api/posts/comments/${commentId}/delete/`,
+};
+
+export const REACTION_ENDPOINTS = {
+  GET_TYPES: '/api/posts/reaction-types/',
+  REACT: (postId) => `/api/posts/${postId}/react/`,
+  UNREACT: (postId) => `/api/posts/${postId}/unreact/`,
 };
 
 // We can remove this or keep it for future endpoints
