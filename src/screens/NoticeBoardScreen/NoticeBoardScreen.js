@@ -11,7 +11,7 @@ import { clearAnnouncementCache } from '../../services/commentService';
 
 const NoticeBoardScreen = ({ navigation }) => {
     const user = useSelector(state => state.auth.user);
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'ADMIN';
     
     const scrollY = useRef(new Animated.Value(0)).current;
     const lastOffset = useRef(0);

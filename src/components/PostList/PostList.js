@@ -6,11 +6,13 @@ import {
   RefreshControl,
   TouchableOpacity,
   StyleSheet,
-  Animated
+  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Post from '../Post';
 import ColorPalette from '../../constants/ColorPalette';
+import ScreenLayout from '../../components/layout/ScreenLayout';
 import { transformPost } from '../../utils/postTransformUtils';
 import LoadingIndicator from '../common/LoadingIndicator';
 
@@ -190,7 +192,8 @@ const PostListComponent = forwardRef(({
     if (loading && hasMore && initialLoadComplete) {
       return (
         <LoadingIndicator 
-          size="small" 
+          size="large" 
+          color={ColorPalette.gradient_text}
           style={styles.loader} 
         />
       );
@@ -207,7 +210,15 @@ const PostListComponent = forwardRef(({
 
   // Initial loading screen (fullscreen loader)
   if (loading && !initialLoadComplete && posts.length === 0) {
-    return <LoadingIndicator fullScreen={true} />;
+  
+      return (
+        <ScreenLayout backgroundColor={ColorPalette.dark_bg} statusBarStyle="light-content" style={{flex: 1}}>
+          <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+            <ActivityIndicator size="large" color={ColorPalette.gradient_text} />
+          </View>
+        </ScreenLayout>
+      );
+    
   }
 
   return (
@@ -258,6 +269,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 20,
   },
+    container: {
+      flex: 1,
+      backgroundColor: ColorPalette.dark_bg,
+    },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Image,
   ActivityIndicator,
   Modal,
@@ -17,6 +16,8 @@ import ColorPalette from '../../constants/ColorPalette';
 import { updateProfile } from '../../services/userService';
 import { processMediaFile, prepareMediaFormData, validateMediaFile } from '../../utils/mediaUtils';
 import ScreenLayout from '../../components/layout/ScreenLayout';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import CustomAlert from '../../components/CustomAlert';
 
 const EditProfileScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -32,6 +33,10 @@ const EditProfileScreen = ({ navigation }) => {
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [datePickerStep, setDatePickerStep] = useState('year'); // 'year', 'month', 'day'
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertType, setAlertType] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [updatedUserData, setUpdatedUserData] = useState(null);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -187,8 +192,25 @@ const EditProfileScreen = ({ navigation }) => {
     </Modal>
   );
 
+  const showAlert = (type, message, duration = 3000) => {
+    setAlertType(type);
+    setAlertMessage(message);
+    setAlertVisible(true);
+    
+    if (type !== 'loading') {
+      setTimeout(() => {
+        setAlertVisible(false);
+        if (type === 'success') {
+          navigation.navigate('Profile', { updatedUser: updatedUserData });
+        }
+      }, duration);
+    }
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    showAlert('loading', 'Updating profile...');
+    
     try {
       // Step 1: Process and validate the profile image
       const processedFiles = [];
@@ -214,12 +236,12 @@ const EditProfileScreen = ({ navigation }) => {
       });
 
       console.log('Profile updated successfully:', response.user); // Debugging log
-
-      Alert.alert('Success', response.message || 'Profile updated successfully.');
-      navigation.navigate('Profile', { updatedUser: response.user }); // Pass updated user data
+      setUpdatedUserData(response.user); // Store the response data
+      showAlert('success', response.message || 'Profile updated successfully');
+      
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile. Please try again.');
+      showAlert('error', error.message || 'Failed to update profile. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -227,15 +249,23 @@ const EditProfileScreen = ({ navigation }) => {
 
   return (
     <ScreenLayout backgroundColor={ColorPalette.main_black} statusBarStyle="light-content">
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={ColorPalette.white} />
-          </TouchableOpacity>
-          <Text style={styles.headerText}>Edit Profile</Text>
-          <View style={{ width: 24 }} /> {/* Spacer for alignment */}
-        </View>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={ColorPalette.white} />
+        </TouchableOpacity>
+        <Text style={styles.headerText}>Edit Profile</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraScrollHeight={20}
+        showsVerticalScrollIndicator={false}
+      >
         <TouchableOpacity style={styles.imagePickerContainer} onPress={handleSelectImage}>
           <View style={styles.imageWrapper}>
             {formData.profile_image ? (
@@ -315,7 +345,14 @@ const EditProfileScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAwareScrollView>
+
+      {/* Replace CustomDialog with CustomAlert */}
+      <CustomAlert 
+        visible={alertVisible}
+        type={alertType}
+        message={alertMessage}
+      />
     </ScreenLayout>
   );
 };
@@ -325,6 +362,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: ColorPalette.main_black,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40, // Add extra padding at bottom
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -332,6 +373,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: ColorPalette.border_color,
+    backgroundColor: ColorPalette.main_black, // Ensure header has background
+    zIndex: 1, // Keep header above scroll content
   },
   headerText: {
     color: ColorPalette.white,
@@ -377,6 +420,7 @@ const styles = StyleSheet.create({
   },
   inputsContainer: {
     padding: 16,
+    paddingBottom: 40, // Extra padding for keyboard
   },
   inputWrapper: {
     marginBottom: 20,
