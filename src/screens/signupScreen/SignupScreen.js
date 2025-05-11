@@ -113,9 +113,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: ColorPalette.text_black,
     marginBottom: 40,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
     textAlign: 'center',
-    fontWeight: '100',
     marginTop: 20,
   },
   rememberForgotContainer: {
@@ -160,7 +159,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 20,
     color: ColorPalette.green,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
   },
 });
 

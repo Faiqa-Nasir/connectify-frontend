@@ -21,6 +21,7 @@ export const POST_ENDPOINTS = {
   DELETE: (postId) => `/api/posts/${postId}/delete/`,
   TRENDS: '/api/posts/trends/',
   TREND_POSTS: (hashtag) => `/api/posts/trend/${hashtag}/`,
+  ANNOUNCEMENTS: '/api/posts/announcements/',
 };
 
 export const COMMENT_ENDPOINTS = {
@@ -39,5 +40,6 @@ export const REACTION_ENDPOINTS = {
 
 // We can remove this or keep it for future endpoints
 export const USER_ENDPOINTS = {
+  UPDATE_PROFILE: '/api/auth/profile/update/',
   // User specific endpoints can be added here as needed
 };

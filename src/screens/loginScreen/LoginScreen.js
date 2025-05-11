@@ -208,9 +208,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: ColorPalette.text_black,
     marginBottom: 10,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
     textAlign: 'center',
-    fontWeight: '100',
     marginTop: 20,
   },
   rememberForgotContainer: {
@@ -254,7 +253,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 10,
     color: ColorPalette.green,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
   },
   errorText: {
     color: 'red',

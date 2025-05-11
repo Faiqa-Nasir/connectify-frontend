@@ -316,13 +316,9 @@ const Post = ({ post, onPostDeleted }) => {
 
     // Render a profile image or placeholder
     const renderProfileImage = () => {
-        const validProfileImage = post.user?.profileImage && 
-            typeof post.user.profileImage === 'string' && 
-            (post.user.profileImage.startsWith('http://') || 
-             post.user.profileImage.startsWith('https://') || 
-             post.user.profileImage.startsWith('file://'));
-             
-        if (!validProfileImage) {
+        const profileImageUrl = post.user?.profileImage;
+
+        if (!profileImageUrl) {
             return (
                 <View style={styles.profilePicPlaceholder}>
                     <Text style={styles.profilePicText}>
@@ -331,10 +327,10 @@ const Post = ({ post, onPostDeleted }) => {
                 </View>
             );
         }
-        
+
         return (
             <Image 
-                source={{ uri: post.user.profileImage }} 
+                source={{ uri: profileImageUrl }} 
                 style={styles.profilePic}
                 onError={() => console.log('Error loading profile image')}
             />
@@ -778,14 +774,15 @@ const styles = StyleSheet.create({
     },
     userName: {
         color: ColorPalette.white,
-        fontFamily: 'CG-Bold',
-        fontSize: 15,
+        fontFamily: 'CG-Medium',
+        fontWeight: '700',
+        fontSize: 16,
         marginRight: 4,
     },
     userHandle: {
         color: ColorPalette.grey_text,
         fontFamily: 'CG-Regular',
-        fontSize: 14,
+        fontSize: 16,
         marginRight: 4,
     },
     dot: {

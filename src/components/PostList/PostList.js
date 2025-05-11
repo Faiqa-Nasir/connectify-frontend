@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, forwardRef } from 'react';
 import { 
   View, 
   Text, 
   FlatList, 
   RefreshControl,
   TouchableOpacity,
-  StyleSheet
+  StyleSheet,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Post from '../Post';
@@ -13,7 +14,7 @@ import ColorPalette from '../../constants/ColorPalette';
 import { transformPost } from '../../utils/postTransformUtils';
 import LoadingIndicator from '../common/LoadingIndicator';
 
-const PostList = ({ 
+const PostListComponent = forwardRef(({ 
   fetchPostsFunction, 
   ListHeaderComponent, 
   ListEmptyComponent,
@@ -29,7 +30,9 @@ const PostList = ({
   refreshControlTintColor = ColorPalette.green,
   keyExtractorPrefix = "post",
   onPostCountChange, // New prop for notifications
-}) => {
+  contentContainerStyle,
+  scrollEventThrottle
+}, ref) => {
   // State for posts, pagination, and loading states
   const [posts, setPosts] = useState(initialPosts);
   const [loading, setLoading] = useState(true); // Start with loading true
@@ -209,7 +212,7 @@ const PostList = ({
 
   return (
     <FlatList
-      ref={flatListRef}
+      ref={ref}
       data={posts}
       renderItem={renderPostItem}
       keyExtractor={keyExtractor}
@@ -237,10 +240,18 @@ const PostList = ({
       initialNumToRender={5}
       windowSize={10}
       onScroll={onScroll}
-      scrollEventThrottle={16}
+      scrollEventThrottle={scrollEventThrottle || 16}
     />
   );
-};
+});
+
+PostListComponent.displayName = 'PostList';
+
+// Create animated version
+const AnimatedPostListComponent = Animated.createAnimatedComponent(PostListComponent);
+
+export const AnimatedPostList = AnimatedPostListComponent;
+export default PostListComponent;
 
 const styles = StyleSheet.create({
   listContent: {
@@ -287,5 +298,3 @@ const styles = StyleSheet.create({
     backgroundColor: ColorPalette.main_black,
   },
 });
-
-export default PostList;

@@ -115,8 +115,8 @@ const WorkspaceSelectionScreen = ({ navigation, onWorkspaceSelected }) => {
           <CustomButton
             title="Join"
             onPress={() => handleJoinWorkspace(item)}
-            height={36}
-            width={70}
+            height={28}
+            width={40}
             fontSize={14}
           />
         </View>
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     color: ColorPalette.text_black,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
   },
   helpButton: {
     padding: 5,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   listHeader: {
     fontSize: 18,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
     color: ColorPalette.text_black,
     marginBottom: 5,
     paddingHorizontal: 10,
@@ -284,14 +284,14 @@ const styles = StyleSheet.create({
   workspaceInitial: {
     fontSize: 20,
     color: ColorPalette.white,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
   },
   workspaceInfo: {
     flex: 1,
   },
   workspaceName: {
     fontSize: 16,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
     color: ColorPalette.text_black,
     marginBottom: 2,
   },
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   },
   noWorkspacesText: {
     fontSize: 18,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
     color: ColorPalette.text_black,
     marginTop: 15,
     textAlign: 'center',
