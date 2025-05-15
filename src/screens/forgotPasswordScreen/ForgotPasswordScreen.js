@@ -60,9 +60,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: ColorPalette.text_black,
     marginBottom: 5,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
     textAlign: 'center',
-    fontWeight: '100',
   },
   loggedInText: {
     fontSize: 24,
@@ -82,7 +81,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 20,
     color: ColorPalette.green,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
   },
   forgotPasswordText: {
     fontSize: 16,

@@ -28,6 +28,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    fontFamily: 'CG-Medium',
   },
   iconContainer: {
     marginRight: 10,

@@ -28,475 +28,481 @@ import { fetchUserData } from '../../utils/userUtils';
 import * as FileSystem from 'expo-file-system';
 import { processMediaFile, prepareMediaFormData,validateMediaFile } from '../../utils/mediaUtils';
 const CreatePostScreen = ({ navigation, route }) => {
-  // Content state
-  const [content, setContent] = useState('');
-  const [mediaFiles, setMediaFiles] = useState([]);
-  const [taggedUsers, setTaggedUsers] = useState([]);
-  const [hashtags, setHashtags] = useState([]);
-  const [isPublic, setIsPublic] = useState(true);
-  
-  // UI state
-  const [isLoading, setIsLoading] = useState(false);
-  const [isMediaLoading, setIsMediaLoading] = useState(false); // New state for media loading
-  const [currentWorkspace, setCurrentWorkspace] = useState(null);
-  const [showUserSearchModal, setShowUserSearchModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isBackgroundUpload, setIsBackgroundUpload] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(''); // 'pending', 'success', 'error'
-  
-  // Reference to text input for focusing
-  const contentInputRef = useRef(null);
-  
-  // Load current workspace from AsyncStorage
-  useEffect(() => {
-    const loadWorkspace = async () => {
+    const postType = route.params?.postType || 'post';
+    const isAnnouncement = postType === 'announcement';
+    
+    // Add postType to existing state
+    const [content, setContent] = useState('');
+    const [mediaFiles, setMediaFiles] = useState([]);
+    const [taggedUsers, setTaggedUsers] = useState([]);
+    const [hashtags, setHashtags] = useState([]);
+    const [isPublic, setIsPublic] = useState(true);
+    
+    // UI state
+    const [isLoading, setIsLoading] = useState(false);
+    const [isMediaLoading, setIsMediaLoading] = useState(false); // New state for media loading
+    const [currentWorkspace, setCurrentWorkspace] = useState(null);
+    const [showUserSearchModal, setShowUserSearchModal] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [isBackgroundUpload, setIsBackgroundUpload] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState(''); // 'pending', 'success', 'error'
+    
+    // Reference to text input for focusing
+    const contentInputRef = useRef(null);
+    
+    // Load current workspace from AsyncStorage
+    useEffect(() => {
+      const loadWorkspace = async () => {
+        try {
+          const storedWorkspace = await AsyncStorage.getItem('selectedWorkspace');
+          if (storedWorkspace) {
+            const workspace = JSON.parse(storedWorkspace);
+            setCurrentWorkspace(workspace);
+            console.log('Loaded workspace:', workspace);
+          }
+        } catch (error) {
+          console.error('Error loading workspace:', error);
+          Alert.alert('Error', 'Failed to load workspace information');
+        }
+      };
+      
+      loadWorkspace();
+    }, []);
+    
+    // Request media library permissions
+    useEffect(() => {
+      const requestPermissions = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            'Permission Required',
+            'Please grant media library access to upload photos or videos',
+            [{ text: 'OK' }]
+          );
+        }
+      };
+      
+      requestPermissions();
+    }, []);
+    
+    // Handle selecting media from device library
+    const handleSelectMedia = useCallback(async () => {
+      setIsMediaLoading(true); // Set media loading to true when selection starts
+      
       try {
-        const storedWorkspace = await AsyncStorage.getItem('selectedWorkspace');
-        if (storedWorkspace) {
-          const workspace = JSON.parse(storedWorkspace);
-          setCurrentWorkspace(workspace);
-          console.log('Loaded workspace:', workspace);
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.All,
+          allowsMultipleSelection: true,
+          quality: 0.8,
+          selectionLimit: 5 - mediaFiles.length, // Limit total to 5 files
+        });
+        
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          // Check file size limits (10MB per file)
+          const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+          
+          const validAssets = result.assets.filter(asset => {
+            if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+              Alert.alert('File too large', `${asset.fileName || 'A file'} exceeds the 10MB limit`);
+              return false;
+            }
+            return true;
+          });
+          
+          // Check if adding these would exceed the 5 file limit
+          if (mediaFiles.length + validAssets.length > 5) {
+            Alert.alert('Limit Exceeded', 'You can only add up to 5 media files');
+            // Only add files up to the limit
+            const remainingSlots = 5 - mediaFiles.length;
+            if (remainingSlots > 0) {
+              setMediaFiles(prev => [...prev, ...validAssets.slice(0, remainingSlots)]);
+            }
+            return;
+          }
+          
+          // Add the media files to state
+          setMediaFiles(prev => [...prev, ...validAssets]);
+          console.log(`Added ${validAssets.length} media files`);
         }
       } catch (error) {
-        console.error('Error loading workspace:', error);
-        Alert.alert('Error', 'Failed to load workspace information');
+        console.error('Error selecting media:', error);
+        Alert.alert('Error', 'Failed to select media. Please try again.');
+      } finally {
+        setIsMediaLoading(false); // Set media loading to false when done
       }
-    };
+    }, [mediaFiles]);
     
-    loadWorkspace();
-  }, []);
-  
-  // Request media library permissions
-  useEffect(() => {
-    const requestPermissions = async () => {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant media library access to upload photos or videos',
-          [{ text: 'OK' }]
-        );
-      }
-    };
+    // Remove a media file
+    const handleRemoveMedia = useCallback((index) => {
+      setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    }, []);
     
-    requestPermissions();
-  }, []);
-  
-  // Handle selecting media from device library
-  const handleSelectMedia = useCallback(async () => {
-    setIsMediaLoading(true); // Set media loading to true when selection starts
-    
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
-        allowsMultipleSelection: true,
-        quality: 0.8,
-        selectionLimit: 5 - mediaFiles.length, // Limit total to 5 files
+    // Handle adding a tagged user
+    const handleAddUser = useCallback((user) => {
+      setTaggedUsers(prev => {
+        // Check if user is already tagged
+        if (prev.some(taggedUser => taggedUser.id === user.id)) {
+          return prev;
+        }
+        return [...prev, user];
       });
+      setShowUserSearchModal(false);
+    }, []);
+    
+    // Handle removing a tagged user
+    const handleRemoveUser = useCallback((userId) => {
+      setTaggedUsers(prev => prev.filter(user => user.id !== userId));
+    }, []);
+    
+    // Extract hashtags from content
+    const extractHashtags = useCallback((text) => {
+      const hashtagRegex = /#(\w+)/g;
+      const matches = text.match(hashtagRegex);
       
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        // Check file size limits (10MB per file)
-        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-        
-        const validAssets = result.assets.filter(asset => {
-          if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
-            Alert.alert('File too large', `${asset.fileName || 'A file'} exceeds the 10MB limit`);
-            return false;
-          }
-          return true;
-        });
-        
-        // Check if adding these would exceed the 5 file limit
-        if (mediaFiles.length + validAssets.length > 5) {
-          Alert.alert('Limit Exceeded', 'You can only add up to 5 media files');
-          // Only add files up to the limit
-          const remainingSlots = 5 - mediaFiles.length;
-          if (remainingSlots > 0) {
-            setMediaFiles(prev => [...prev, ...validAssets.slice(0, remainingSlots)]);
-          }
-          return;
+      if (matches) {
+        return matches.map(tag => tag.substring(1)); // Remove # symbol
+      }
+      return [];
+    }, []);
+    
+    // Handle content change with hashtag extraction
+    const handleContentChange = useCallback((text) => {
+      setContent(text);
+      setHashtags(extractHashtags(text));
+    }, [extractHashtags]);
+    
+    // Validate the post before submission
+    const validatePost = useCallback(() => {
+      if (!content.trim()) {
+        setErrorMessage('Please enter some content for your post');
+        return false;
+      }
+      
+      if (!currentWorkspace) {
+        setErrorMessage('No workspace selected');
+        return false;
+      }
+      
+      return true;
+    }, [content, currentWorkspace]);
+
+
+    // Submit the post to the API
+    const handleSubmitPost = useCallback(async () => {
+        if (!validatePost()) {
+            return;
         }
         
-        // Add the media files to state
-        setMediaFiles(prev => [...prev, ...validAssets]);
-        console.log(`Added ${validAssets.length} media files`);
-      }
-    } catch (error) {
-      console.error('Error selecting media:', error);
-      Alert.alert('Error', 'Failed to select media. Please try again.');
-    } finally {
-      setIsMediaLoading(false); // Set media loading to false when done
-    }
-  }, [mediaFiles]);
-  
-  // Remove a media file
-  const handleRemoveMedia = useCallback((index) => {
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
-  }, []);
-  
-  // Handle adding a tagged user
-  const handleAddUser = useCallback((user) => {
-    setTaggedUsers(prev => {
-      // Check if user is already tagged
-      if (prev.some(taggedUser => taggedUser.id === user.id)) {
-        return prev;
-      }
-      return [...prev, user];
-    });
-    setShowUserSearchModal(false);
-  }, []);
-  
-  // Handle removing a tagged user
-  const handleRemoveUser = useCallback((userId) => {
-    setTaggedUsers(prev => prev.filter(user => user.id !== userId));
-  }, []);
-  
-  // Extract hashtags from content
-  const extractHashtags = useCallback((text) => {
-    const hashtagRegex = /#(\w+)/g;
-    const matches = text.match(hashtagRegex);
-    
-    if (matches) {
-      return matches.map(tag => tag.substring(1)); // Remove # symbol
-    }
-    return [];
-  }, []);
-  
-  // Handle content change with hashtag extraction
-  const handleContentChange = useCallback((text) => {
-    setContent(text);
-    setHashtags(extractHashtags(text));
-  }, [extractHashtags]);
-  
-  // Validate the post before submission
-  const validatePost = useCallback(() => {
-    if (!content.trim()) {
-      setErrorMessage('Please enter some content for your post');
-      return false;
-    }
-    
-    if (!currentWorkspace) {
-      setErrorMessage('No workspace selected');
-      return false;
-    }
-    
-    return true;
-  }, [content, currentWorkspace]);
+        setIsSubmitting(true);
+        setErrorMessage('');
+        
+        try {
+            // Step 1: Process and validate media files
+            const processedFiles = [];
+            for (const media of mediaFiles) {
+                const processed = await processMediaFile(media);
+                validateMediaFile(processed);
+                processedFiles.push(processed);
+            }
 
+            // Step 2: Prepare FormData
+            const formData = new FormData();
+            formData.append('content', content);
+            formData.append('organization_id', currentWorkspace?.id || currentWorkspace);
+            formData.append('type', route.params?.postType || 'post'); // Set type based on route params
+            formData.append('ispublic', isPublic);
 
-  // Submit the post to the API
-  const handleSubmitPost = useCallback(async () => {
-    if (!validatePost()) {
-      return;
-    }
-    
-    setIsSubmitting(true);
-    setErrorMessage('');
-    
-    try {
-      // Step 1: Process and validate each media file
-      const processedFiles = [];
-      for (const media of mediaFiles) {
-        const processed = await processMediaFile(media);
-        validateMediaFile(processed);
-        processedFiles.push(processed);
-      }
+            if (taggedUsers.length > 0) {
+                const taggedUserIds = taggedUsers.map((user) => user.id);
+                formData.append('tagged_user_ids', JSON.stringify(taggedUserIds));
+            }
 
-      // Step 2: Prepare FormData
-      const formData = new FormData();
-      formData.append('content', content);
-      formData.append('organization_id', currentWorkspace?.id || currentWorkspace);
-      formData.append('ispublic', isPublic);
+            prepareMediaFormData(formData, processedFiles);
+            
+            // Step 3: Upload using appropriate endpoint
+            const response = await createPost(formData, 0, (progress) => {
+                setUploadProgress(progress);
+            }, isAnnouncement);
 
-      if (taggedUsers.length > 0) {
-        const taggedUserIds = taggedUsers.map((user) => user.id);
-        formData.append('tagged_user_ids', JSON.stringify(taggedUserIds));
-      }
+            const data = await response;
+            console.log('Upload Success:', data);
 
-      prepareMediaFormData(formData, processedFiles);
-      // Step 3: Upload using fetch
-      const response = await createPost(formData, 0, (progress) => {
-        setUploadProgress(progress);
-      });
+            // Navigate back to appropriate screen
+            const targetScreen = isAnnouncement ? 'NoticeBoard' : 'Home';
+            navigation.reset({
+                index: 0,
+                routes: [{ name: targetScreen, params: { refreshFeed: true } }],
+            });
 
-      const data = await response;
-      console.log('Upload Success:', data);
+        } catch (error) {
+            console.error('Upload Failed:', error);
+            setErrorMessage(error.message || 'Failed to create post. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [validatePost, content, currentWorkspace, isPublic, taggedUsers, mediaFiles, navigation, postType]);
 
-      // Navigate directly to HomeScreen with refresh flag instead of Profile
-      navigation.navigate('Home', { refreshFeed: true });
-      // Clear the create post screen from navigation stack
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home', params: { refreshFeed: true } }],
-      });
-
-    } catch (error) {
-      console.error('Upload Failed:', error);
-      setErrorMessage(error.message || 'Failed to create post. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [validatePost, content, currentWorkspace, isPublic, taggedUsers, mediaFiles, navigation]);
-  
-  // Background upload function
-  const backgroundUpload = useCallback(async (formData) => {
-    try {
-      setUploadStatus('pending');
-      
-      // Perform the upload
-      await createPost(formData, 0, (progress) => {
-        setUploadProgress(progress);
-      });
-      
-      // On success
-      setUploadStatus('success');
-      
-      // Notify user of successful upload
-      Alert.alert(
-        'Post Uploaded',
-        'Your post has been successfully uploaded.',
-        [{ text: 'OK' }]
-      );
-      
-    } catch (error) {
-      console.error('Background upload error:', error);
-      setUploadStatus('error');
-      
-      // Store in queue for retry
+    // Background upload function
+    const backgroundUpload = useCallback(async (formData) => {
       try {
-        const uploadQueue = await AsyncStorage.getItem('postUploadQueue');
-        const queue = uploadQueue ? JSON.parse(uploadQueue) : [];
+        setUploadStatus('pending');
         
-        queue.push({
-          formData: JSON.stringify(formData),
-          timestamp: new Date().toISOString(),
-          attempts: 0
+        // Perform the upload
+        await createPost(formData, 0, (progress) => {
+          setUploadProgress(progress);
         });
-        await AsyncStorage.setItem('postUploadQueue', JSON.stringify(queue));
         
+        // On success
+        setUploadStatus('success');
+        
+        // Notify user of successful upload
         Alert.alert(
-          'Upload Failed',
-          'Your post will be uploaded when network conditions improve.',
+          'Post Uploaded',
+          'Your post has been successfully uploaded.',
           [{ text: 'OK' }]
         );
-      } catch (storageError) {
-        console.error('Error storing failed upload:', storageError);
+        
+      } catch (error) {
+        console.error('Background upload error:', error);
+        setUploadStatus('error');
+        
+        // Store in queue for retry
+        try {
+          const uploadQueue = await AsyncStorage.getItem('postUploadQueue');
+          const queue = uploadQueue ? JSON.parse(uploadQueue) : [];
+          
+          queue.push({
+            formData: JSON.stringify(formData),
+            timestamp: new Date().toISOString(),
+            attempts: 0
+          });
+          await AsyncStorage.setItem('postUploadQueue', JSON.stringify(queue));
+          
+          Alert.alert(
+            'Upload Failed',
+            'Your post will be uploaded when network conditions improve.',
+            [{ text: 'OK' }]
+          );
+        } catch (storageError) {
+          console.error('Error storing failed upload:', storageError);
+        }
+      } finally {
+        setIsBackgroundUpload(false);
+        setUploadProgress(0);
       }
-    } finally {
-      setIsBackgroundUpload(false);
-      setUploadProgress(0);
-    }
-  }, []);
-  
-  // Render tagged users list
-  const renderTaggedUser = useCallback(({ item }) => (
-    <TaggedUserItem 
-      user={item} 
-      onRemove={handleRemoveUser} 
-    />
-  ), [handleRemoveUser]);
-  
-  // Key extractor for lists
-  const keyExtractor = useCallback((item, index) => 
-    item.id ? `user-${item.id}` : `item-${index}`, 
-  []);
-  
-  return (
-    <ScreenLayout
-      backgroundColor={ColorPalette.main_black}
-      statusBarStyle="light-content"
-    >
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    }, []);
+    
+    // Render tagged users list
+    const renderTaggedUser = useCallback(({ item }) => (
+      <TaggedUserItem 
+        user={item} 
+        onRemove={handleRemoveUser} 
+      />
+    ), [handleRemoveUser]);
+    
+    // Key extractor for lists
+    const keyExtractor = useCallback((item, index) => 
+      item.id ? `user-${item.id}` : `item-${index}`, 
+    []);
+    
+    return (
+      <ScreenLayout
+        backgroundColor={ColorPalette.main_black}
+        statusBarStyle="light-content"
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => {
-              if (content.trim() || mediaFiles.length > 0) {
-                Alert.alert(
-                  'Discard Post?',
-                  'You have unsaved changes. Are you sure you want to discard this post?',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
-                  ]
-                );
-              } else {
-                navigation.goBack();
-              }
-            }}
-          >
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Post</Text>
-          
-          <TouchableOpacity
-            style={[
-              styles.postButton,
-              (!content.trim() || isSubmitting) && styles.disabledButton
-            ]}
-            onPress={handleSubmitPost}
-            disabled={!content.trim() || isSubmitting}
-          >
-            <Text style={[
-              styles.postText,  
-              (!content.trim() || isSubmitting) && styles.disabledText
-            ]}>
-              Post
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => {
+                if (content.trim() || mediaFiles.length > 0) {
+                  Alert.alert(
+                    'Discard Post?',
+                    'You have unsaved changes. Are you sure you want to discard this post?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
+                    ]
+                  );
+                } else {
+                  navigation.goBack();
+                }
+              }}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>
+                {route.params?.title || 'Post'}
             </Text>
-          </TouchableOpacity>
-        </View>
-        
-        <ScrollView style={styles.scrollContainer}>
-        
-          
-          {/* Error message if any */}
-          {errorMessage ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle-outline" size={18} color="#FF6B6B" />
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
-          ) : null}
-          
-          {/* Post content input */}
-          <TextInput
-            ref={contentInputRef}
-            style={styles.contentInput}
-            multiline
-            placeholder="What's on your mind?"
-            placeholderTextColor={ColorPalette.grey_text}
-            value={content}
-            onChangeText={handleContentChange}
-            autoFocus
-          />
-          
-          {/* Media loading indicator */}
-          {isMediaLoading && (
-            <View style={styles.mediaLoadingContainer}>
-              <ActivityIndicator size="small" color={ColorPalette.green} />
-              <Text style={styles.mediaLoadingText}>Processing media...</Text>
-            </View>
-          )}
-          
-          {/* Media previews */}
-          {mediaFiles.length > 0 && (
-            <View style={styles.mediaPreviewContainer}>
-              <MediaPreview 
-                mediaFiles={mediaFiles} 
-                onRemoveMedia={handleRemoveMedia} 
-              />
-            </View>
-          )}
-          
-          {/* Tagged users section */}
-          {taggedUsers.length > 0 && (
-            <View style={styles.taggedUsersContainer}>
-              <Text style={styles.sectionTitle}>Tagged Users:</Text>
-              <FlatList
-                data={taggedUsers}
-                renderItem={renderTaggedUser}
-                keyExtractor={keyExtractor}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.taggedUsersList}
-              />
-            </View>
-          )}
-          
-          {/* Upload progress indicator */}
-          {isBackgroundUpload && (
-            <View style={styles.uploadProgressContainer}>
-              <Text style={styles.uploadProgressText}>
-                Uploading: {Math.round(uploadProgress)}%
+            
+            <TouchableOpacity
+              style={[
+                styles.postButton,
+                (!content.trim() || isSubmitting) && styles.disabledButton
+              ]}
+              onPress={handleSubmitPost}
+              disabled={!content.trim() || isSubmitting}
+            >
+              <Text style={[
+                styles.postText,  
+                (!content.trim() || isSubmitting) && styles.disabledText
+              ]}>
+                Create
               </Text>
-              <View style={styles.progressBarContainer}>
-                <View 
-                  style={[
-                    styles.progressBar, 
-                    { width: `${uploadProgress}%` }
-                  ]} 
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.scrollContainer}>
+          
+            
+            {/* Error message if any */}
+            {errorMessage ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle-outline" size={18} color="#FF6B6B" />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
+            
+            {/* Post content input */}
+            <TextInput
+              ref={contentInputRef}
+              style={styles.contentInput}
+              multiline
+              placeholder="What's on your mind?"
+              placeholderTextColor={ColorPalette.grey_text}
+              value={content}
+              onChangeText={handleContentChange}
+              autoFocus
+            />
+            
+            {/* Media loading indicator */}
+            {isMediaLoading && (
+              <View style={styles.mediaLoadingContainer}>
+                <ActivityIndicator size="small" color={ColorPalette.green} />
+                <Text style={styles.mediaLoadingText}>Processing media...</Text>
+              </View>
+            )}
+            
+            {/* Media previews */}
+            {mediaFiles.length > 0 && (
+              <View style={styles.mediaPreviewContainer}>
+                <MediaPreview 
+                  mediaFiles={mediaFiles} 
+                  onRemoveMedia={handleRemoveMedia} 
                 />
               </View>
-              <Text style={styles.uploadStatusText}>
-                Your post is being uploaded in the background
+            )}
+            
+            {/* Tagged users section */}
+            {taggedUsers.length > 0 && (
+              <View style={styles.taggedUsersContainer}>
+                <Text style={styles.sectionTitle}>Tagged Users:</Text>
+                <FlatList
+                  data={taggedUsers}
+                  renderItem={renderTaggedUser}
+                  keyExtractor={keyExtractor}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.taggedUsersList}
+                />
+              </View>
+            )}
+            
+            {/* Upload progress indicator */}
+            {isBackgroundUpload && (
+              <View style={styles.uploadProgressContainer}>
+                <Text style={styles.uploadProgressText}>
+                  Uploading: {Math.round(uploadProgress)}%
+                </Text>
+                <View style={styles.progressBarContainer}>
+                  <View 
+                    style={[
+                      styles.progressBar, 
+                      { width: `${uploadProgress}%` }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.uploadStatusText}>
+                  Your post is being uploaded in the background
+                </Text>
+              </View>
+            )}
+            
+            {/* Extra space at bottom for keyboard */}
+            <View style={{ height: 100 }} />
+          </ScrollView>
+          
+          {/* Action buttons */}
+          <View style={styles.actionBar}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleSelectMedia}
+              disabled={mediaFiles.length >= 5 || isSubmitting || isMediaLoading}
+            >
+              <Ionicons
+                name="image-outline"
+                size={24}
+                color={
+                  mediaFiles.length >= 5 || isMediaLoading 
+                    ? ColorPalette.grey_text 
+                    : ColorPalette.white
+                }
+              />
+              <Text style={[
+                styles.actionText,
+                (mediaFiles.length >= 5 || isMediaLoading) && styles.disabledText
+              ]}>
+                {isMediaLoading ? 'Loading...' : 'Media'}
               </Text>
-            </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setShowUserSearchModal(true)}
+              disabled={isSubmitting}
+            >
+              <Ionicons name="person-add-outline" size={24} color={ColorPalette.white} />
+              <Text style={styles.actionText}>Tag People</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setIsPublic(!isPublic)}
+              disabled={isSubmitting}
+            >
+              <Ionicons
+                name={isPublic ? "globe-outline" : "lock-closed-outline"}
+                size={24}
+                color={ColorPalette.white}
+              />
+              <Text style={styles.actionText}>
+                {isPublic ? "Public" : "Private"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* User search modal for tagging */}
+          <UserSearchModal
+            visible={showUserSearchModal}
+            onClose={() => setShowUserSearchModal(false)}
+            onSelectUser={handleAddUser}
+            organizationId={currentWorkspace?.id}
+          />
+          
+          {/* Loading overlay when submitting */}
+          {isSubmitting && (        
+            <LoadingOverlay message="Creating post..." />
           )}
-          
-          {/* Extra space at bottom for keyboard */}
-          <View style={{ height: 100 }} />
-        </ScrollView>
-        
-        {/* Action buttons */}
-        <View style={styles.actionBar}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleSelectMedia}
-            disabled={mediaFiles.length >= 5 || isSubmitting || isMediaLoading}
-          >
-            <Ionicons
-              name="image-outline"
-              size={24}
-              color={
-                mediaFiles.length >= 5 || isMediaLoading 
-                  ? ColorPalette.grey_text 
-                  : ColorPalette.white
-              }
-            />
-            <Text style={[
-              styles.actionText,
-              (mediaFiles.length >= 5 || isMediaLoading) && styles.disabledText
-            ]}>
-              {isMediaLoading ? 'Loading...' : 'Media'}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setShowUserSearchModal(true)}
-            disabled={isSubmitting}
-          >
-            <Ionicons name="person-add-outline" size={24} color={ColorPalette.white} />
-            <Text style={styles.actionText}>Tag People</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setIsPublic(!isPublic)}
-            disabled={isSubmitting}
-          >
-            <Ionicons
-              name={isPublic ? "globe-outline" : "lock-closed-outline"}
-              size={24}
-              color={ColorPalette.white}
-            />
-            <Text style={styles.actionText}>
-              {isPublic ? "Public" : "Private"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* User search modal for tagging */}
-        <UserSearchModal
-          visible={showUserSearchModal}
-          onClose={() => setShowUserSearchModal(false)}
-          onSelectUser={handleAddUser}
-          organizationId={currentWorkspace?.id}
-        />
-        
-        {/* Loading overlay when submitting */}
-        {isSubmitting && (        
-          <LoadingOverlay message="Creating post..." />
-        )}
-      </KeyboardAvoidingView>
-    </ScreenLayout>
-  );
+        </KeyboardAvoidingView>
+      </ScreenLayout>
+    );
 };
 
 const styles = StyleSheet.create({

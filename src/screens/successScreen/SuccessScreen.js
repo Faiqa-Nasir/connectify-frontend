@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 24,
     color: ColorPalette.text_black,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
     textAlign: 'center',
     marginTop: 20,
   },
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginBottom: 16,
     textAlign: "center",
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
   },
   message: {
     fontSize: 16,

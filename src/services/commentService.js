@@ -25,17 +25,16 @@ export const createComment = async (postId, content, parentCommentId = null, ret
     
     console.log('Comment created successfully');
     
+    // Update comment count in post
+    // await updatePostCommentCount(postId, 1);
+    
     // Cache the comment locally for immediate display
     try {
-      // Get existing cached comments for this post
       const cacheKey = `comments_${postId}`;
       const cachedCommentsJson = await AsyncStorage.getItem(cacheKey);
       const cachedComments = cachedCommentsJson ? JSON.parse(cachedCommentsJson) : [];
       
-      // Add the new comment to the cached comments
       cachedComments.unshift(response.data);
-      
-      // Store back in cache with a limit of 50 comments
       await AsyncStorage.setItem(cacheKey, JSON.stringify(cachedComments.slice(0, 50)));
     } catch (cacheError) {
       console.warn('Failed to cache comment:', cacheError);
@@ -242,7 +241,7 @@ export const fetchReplies = async (commentId, page = 1, pageSize = 10, retryCoun
  * @param {number} retryCount - Number of retry attempts (internal use)
  * @returns {Promise} - Promise resolving to the updated comment
  */
-export const updateComment = async (commentId, content, retryCount = 0) => {
+export const updateComment = async (commentId, content, postId, retryCount = 0) => {
   try {
     console.log(`Updating comment ${commentId} with content: ${content}`);
     
@@ -258,6 +257,31 @@ export const updateComment = async (commentId, content, retryCount = 0) => {
     });
     
     console.log('Comment updated successfully:', response.data);
+    
+    // Update comment in cache if it exists
+    try {
+      const cacheKey = `comments_${postId}`;
+      const cachedCommentsJson = await AsyncStorage.getItem(cacheKey);
+      if (cachedCommentsJson) {
+        const cachedComments = JSON.parse(cachedCommentsJson);
+        const updatedComments = cachedComments.map(comment => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              content,
+              updated_at: new Date().toISOString()
+            };
+          }
+          return comment;
+        });
+        
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(updatedComments));
+        console.log('Cache updated successfully for comment:', commentId);
+      }
+    } catch (cacheError) {
+      console.warn('Error updating comment in cache:', cacheError);
+    }
+
     return response.data;
   } catch (error) {
     console.error('Error updating comment:', error);
@@ -272,7 +296,7 @@ export const updateComment = async (commentId, content, retryCount = 0) => {
       await new Promise(resolve => setTimeout(resolve, delay));
       
       // Retry the request
-      return updateComment(commentId, content, retryCount + 1);
+      return updateComment(commentId, content, postId, retryCount + 1);
     }
     
     // Format error message for the UI
@@ -306,7 +330,7 @@ export const updateComment = async (commentId, content, retryCount = 0) => {
  * @param {number} retryCount - Number of retry attempts (internal use)
  * @returns {Promise} - Promise resolving when comment is deleted
  */
-export const deleteComment = async (commentId, retryCount = 0) => {
+export const deleteComment = async (commentId, postId, retryCount = 0) => {
   try {
     console.log(`Deleting comment ${commentId}`);
     
@@ -320,24 +344,22 @@ export const deleteComment = async (commentId, retryCount = 0) => {
     
     console.log('Comment deleted successfully with status:', response.status);
     
-    // Store deleted comment ID in AsyncStorage to handle offline synchronization
-    try {
-      const deletedCommentsJson = await AsyncStorage.getItem('deletedComments');
-      const deletedComments = deletedCommentsJson ? JSON.parse(deletedCommentsJson) : [];
-      
-      deletedComments.push({
-        id: commentId,
-        deletedAt: new Date().toISOString()
-      });
-      
-      // Keep only the last 100 deleted comments
-      const trimmedDeletedComments = deletedComments.slice(-100);
-      
-      await AsyncStorage.setItem('deletedComments', JSON.stringify(trimmedDeletedComments));
-    } catch (storageError) {
-      console.error('Error updating deleted comments in storage:', storageError);
-    }
+    // Update comment count in post
+    // await updatePostCommentCount(postId, -1);
     
+    // Remove from cache if exists
+    try {
+      const cacheKey = `comments_${postId}`;
+      const cachedCommentsJson = await AsyncStorage.getItem(cacheKey);
+      if (cachedCommentsJson) {
+        const cachedComments = JSON.parse(cachedCommentsJson);
+        const filteredComments = cachedComments.filter(comment => comment.id !== commentId);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(filteredComments));
+      }
+    } catch (cacheError) {
+      console.warn('Error removing comment from cache:', cacheError);
+    }
+
     return response;
   } catch (error) {
     console.error('Error deleting comment:', error);
@@ -352,7 +374,7 @@ export const deleteComment = async (commentId, retryCount = 0) => {
       await new Promise(resolve => setTimeout(resolve, delay));
       
       // Retry the request
-      return deleteComment(commentId, retryCount + 1);
+      return deleteComment(commentId, postId, retryCount + 1);
     }
     
     // Format error message for the UI
@@ -377,5 +399,22 @@ export const deleteComment = async (commentId, retryCount = 0) => {
     }
     
     throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Clear announcement cache
+ * @returns {Promise} - Promise resolving when cache is cleared
+ */
+export const clearAnnouncementCache = async () => {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const announcementKeys = keys.filter(key => key.startsWith('comments_'));
+    if (announcementKeys.length > 0) {
+      await AsyncStorage.multiRemove(announcementKeys);
+      console.log('Cleared announcement cache');
+    }
+  } catch (error) {
+    console.error('Error clearing announcement cache:', error);
   }
 };

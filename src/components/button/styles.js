@@ -27,7 +27,7 @@ export const styles = StyleSheet.create({
   startText: {
     color: '#fff',
     fontSize: 18, // Slightly larger font
-    fontWeight: 'bold',
+    fontFamily: 'CG-Bold', // Ensure this font is available in your project
     textShadowColor: 'rgba(0, 0, 0, 0.3)', // Text shadow for better readability
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,

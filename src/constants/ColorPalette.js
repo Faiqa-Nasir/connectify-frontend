@@ -27,4 +27,5 @@ export default ColorPalette = {
     light_bg: 'rgba(235, 237, 253, 1)',
     dark_bg: 'rgba(18, 18, 18, 1)',
     dark_gray:'rgba(255, 255, 255, 0.05)',
+    border_color: '#2A2A2A'
 };

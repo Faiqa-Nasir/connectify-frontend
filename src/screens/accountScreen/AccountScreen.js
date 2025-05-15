@@ -4,138 +4,153 @@ import {
   TouchableOpacity, 
   ScrollView, 
   StyleSheet, 
-  Animated, 
   Image, 
-  Alert,
-  StatusBar,
-  SafeAreaView
+  Alert
 } from 'react-native';
-import React, { useState, useContext, useEffect } from 'react';
-import ColorPallete from '../../constants/ColorPalette';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
+import ColorPalette from '../../constants/ColorPalette';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
 import { logoutUser } from '../../redux/authSlice';
 import ScreenLayout from '../../components/layout/ScreenLayout';
+import Header, { HEADER_HEIGHT } from '../../components/Header';
+import { fetchUserData } from '../../utils/userUtils';
+import CustomDialog from '../../components/CustomDialog';
 
 export default function AccountScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [orgData, setOrgData] = useState(null);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const dispatch = useDispatch();
   
+  // Update the fetchUserData implementation
+  const loadUserData = useCallback(async () => {
+    try {
+      const user = await fetchUserData();
+      if (user) {
+        setUserData(user);
+        return user;
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+    return null;
+  }, []);
+
   useEffect(() => {
-    const fetchUserData = async () => {
+    const loadData = async () => {
       try {
-        const userJSON = await AsyncStorage.getItem('user');
+        await loadUserData();
         const orgJSON = await AsyncStorage.getItem('organization');
-        
-        if (userJSON) {
-          console.log('User data:', JSON.parse(userJSON));
-          setUserData(JSON.parse(userJSON));
-        }
-        
         if (orgJSON) {
           setOrgData(JSON.parse(orgJSON));
         }
       } catch (error) {
-        console.error('Error fetching data from localStorage:', error);
+        console.error('Error fetching data:', error);
       }
     };
     
-    fetchUserData();
-  }, []);
+    loadData();
+  }, [loadUserData]);
 
   // Handle user logout
   const handleLogout = async () => {
-    Alert.alert(
-      "Confirm Logout",
-      "Are you sure you want to log out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive", 
-          onPress: async () => {
-            try {
-              // Clear all data from AsyncStorage
-              await AsyncStorage.clear();
-              
-              // Dispatch logout action to Redux
-              dispatch(logoutUser());
-              
-              // Navigate to Auth stack
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Auth' }],
-              });
-            } catch (error) {
-              console.error('Error during logout:', error);
-              Alert.alert('Error', 'Failed to log out. Please try again.');
-            }
-          }
-        }
-      ]
-    );
+    setShowLogoutDialog(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    try {
+      // Clear all data from AsyncStorage
+      await AsyncStorage.clear();
+      
+      // Dispatch logout action to Redux
+      dispatch(logoutUser());
+      
+      // Navigate to Auth stack
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Auth' }],
+      });
+    } catch (error) {
+      console.error('Error during logout:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
   };
 
   return (
     <ScreenLayout 
-      backgroundColor="#f8f8f8" 
-      statusBarStyle="dark-content"
+      backgroundColor={ColorPalette.main_black} 
+      statusBarStyle="light-content"
     >
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.heading}>My Account</Text>
-        </View>
-
-        {/* User Profile Info */}
+      <Header 
+        title="Account Settings"
+        showCreateButton={false}
+      />
+      
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingTop: HEADER_HEIGHT + 20 }
+        ]}
+      >
+        {/* Redesigned User Profile Info */}
         <View style={styles.profileContainer}>
-          <View style={styles.avatarContainer}>
-            {userData?.profileImage ? (
-              <Image 
-                source={{ uri: userData.profileImage }} 
-                style={styles.avatar} 
-              />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>
-                  {userData?.first_name?.charAt(0) || userData?.email?.charAt(0) || '?'}
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.userName}>
-              {userData ? `${userData.first_name} ${userData.last_name}` : 'User Name'}
-            </Text>
-            <Text style={styles.userEmail}>{userData?.email || 'email@example.com'}</Text>
-            <Text style={styles.userDetail}>Username: {userData?.username || 'Not specified'}</Text>
-            <Text style={styles.userDetail}>Role: {userData?.role || 'Not specified'}</Text>
-            {orgData && (
-              <Text style={styles.organization}>
-                Organization: {orgData.name || 'Not specified'}
+          <View style={styles.userInfoContainer}>
+            <View style={styles.avatarContainer}>
+              {userData?.profile_image ? (
+                <Image 
+                  source={{ uri: userData.profile_image }} 
+                  style={styles.avatar}
+                  key={userData.profile_image}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarText}>
+                    {userData?.first_name?.charAt(0) || userData?.email?.charAt(0) || '?'}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>
+                {userData ? `${userData.first_name} ${userData.last_name}` : 'Loading...'}
               </Text>
-            )}
+              <Text style={styles.userHandle}>@{userData?.username || 'username'}</Text>
+              <Text style={styles.userRole}>{userData?.bio || ' '}</Text>
+              {orgData && (
+                <Text style={styles.organization}>
+                  {orgData.name}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
      
-        {/* Other Options */}
-        <TouchableOpacity style={styles.optionItem}>
-          <Text style={styles.optionText}>Account Details</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.optionItem}>
-          <Text style={styles.optionText}>Notification Preferences</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.optionItem}>
-          <Text style={styles.optionText}>My Plan</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.optionItem}>
-          <Text style={styles.optionText}>Privacy Settings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.optionItem}>
-          <Text style={styles.optionText}>Support and Feedback</Text>
-        </TouchableOpacity>
+        {/* Options */}
+        <View style={styles.optionsContainer}>
+          <TouchableOpacity style={styles.optionItem}>
+            <Text style={styles.optionText}>Account Details</Text>
+            <Ionicons name="chevron-forward" size={20} color={ColorPalette.grey_text} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionItem}>
+            <Text style={styles.optionText}>Notification Preferences</Text>
+            <Ionicons name="chevron-forward" size={20} color={ColorPalette.grey_text} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionItem}>
+            <Text style={styles.optionText}>My Plan</Text>
+            <Ionicons name="chevron-forward" size={20} color={ColorPalette.grey_text} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionItem}>
+            <Text style={styles.optionText}>Privacy Settings</Text>
+            <Ionicons name="chevron-forward" size={20} color={ColorPalette.grey_text} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionItem}>
+            <Text style={styles.optionText}>Support and Feedback</Text>
+            <Ionicons name="chevron-forward" size={20} color={ColorPalette.grey_text} />
+          </TouchableOpacity>
+        </View>
 
         {/* Logout Button */}
         <TouchableOpacity 
@@ -145,12 +160,22 @@ export default function AccountScreen({ navigation }) {
           <Ionicons 
             name="log-out-outline" 
             size={24} 
-            color="#FF6B6B" 
+            color={ColorPalette.white}
             style={styles.logoutIcon}
           />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <CustomDialog
+        visible={showLogoutDialog}
+        title="Confirm Logout"
+        message="Are you sure you want to log out?"
+        onConfirm={handleConfirmLogout}
+        onCancel={() => setShowLogoutDialog(false)}
+        confirmText="Logout"
+        type="destructive"
+      />
     </ScreenLayout>
   );
 }
@@ -158,142 +183,107 @@ export default function AccountScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: ColorPalette.main_black,
   },
   contentContainer: {
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16, // Reduced from 24 as SafeAreaView handles status bar space
-    marginBottom: 16,
-  },
-  backButton: {
-    padding: 8,
-    borderWidth: 0,
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginLeft: 16,
-  },
   profileContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: ColorPalette.card_bg,
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: ColorPalette.border_color,
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   avatarContainer: {
     marginRight: 16,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   avatarPlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: ColorPallete.main_black_2,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: ColorPalette.green,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
+    color: ColorPalette.white,
+    fontSize: 32,
+    fontFamily: 'CG-Bold',
   },
-  profileInfo: {
+  userInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: ColorPallete.text_black,
+    fontSize: 22,
+    color: ColorPalette.white,
+    fontFamily: 'CG-Bold',
     marginBottom: 4,
   },
-  userEmail: {
+  userHandle: {
+    fontSize: 16,
+    color: ColorPalette.grey_text,
+    fontFamily: 'CG-Regular',
+    marginBottom: 4,
+  },
+  userRole: {
     fontSize: 14,
-    color: ColorPallete.text_black,
-    opacity: 0.8,
+    color: ColorPalette.white,
+    fontFamily: 'CG-Regular',
     marginBottom: 4,
   },
   organization: {
     fontSize: 14,
-    color: ColorPallete.text_black,
-    opacity: 0.8,
+    color: ColorPalette.green,
+    fontFamily: 'CG-Medium',
   },
-  userDetail: {
-    fontSize: 14,
-    color: ColorPallete.text_black,
-    opacity: 0.8,
-    marginBottom: 4,
+  optionsContainer: {
+    backgroundColor: ColorPalette.card_bg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ColorPalette.border_color,
   },
   optionItem: {
-    paddingVertical: 16,
-    borderBottomWidth: 0, // No lines between options
-  },
-  optionTextContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: ColorPalette.border_color,
   },
   optionText: {
     fontSize: 16,
-    color: ColorPallete.text_black,
-  },
-  arrow: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: ColorPallete.text_black,
-  },
-  dropdownContent: {
-    position: 'absolute', // Position it above other content
-    top: 60, // Position it right below the "Professional Information" section
-    left: 16,
-    right: 16,
-    paddingLeft: 16,
-    paddingVertical: 8,
-    backgroundColor: '#333333',
-    borderRadius: 8,
-    marginTop: 10,
-    zIndex: 999, // Ensures it stays on top of other content
-  },
-  dropdownText: {
-    fontSize: 14,
-    color: ColorPallete.pop_up_white,
-    marginBottom: 6,
+    color: ColorPalette.white,
+    fontFamily: 'CG-Regular',
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF0F0',
+    justifyContent: 'center',
+    backgroundColor: ColorPalette.dark_red || '#661111',
     marginTop: 30,
     marginBottom: 40,
-    marginHorizontal: 16,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   logoutIcon: {
     marginRight: 12,
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FF6B6B',
+    fontFamily: 'CG-Medium',
+    color: ColorPalette.white,
   },
 });

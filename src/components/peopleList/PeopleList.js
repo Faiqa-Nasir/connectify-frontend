@@ -20,6 +20,6 @@ const styles = StyleSheet.create({
   personContainer: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 2, borderBottomColor: '#333',backgroundColor:ColorPalette.bg_post,paddingVertical:15 },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   userInfo: { marginLeft: 12 },
-  name: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  name: { color: '#fff', fontSize: 14, fontFamily: 'CG-Bold' },
   username: { color: '#888', fontSize: 13 },
 });

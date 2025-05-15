@@ -15,6 +15,7 @@ export const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
     marginLeft: 12,
+    fontFamily: 'CG-Medium',
   },
   avatar: {
     width: 48,
@@ -24,17 +25,19 @@ export const styles = StyleSheet.create({
   name: {
     color: ColorPalette.text_white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'CG-Bold',
   },
   username: {
     color: ColorPalette.text_gray,
     fontSize: 14,
+    fontFamily: 'CG-Medium',
   },
   content: {
     color: ColorPalette.text_white,
     fontSize: 15,
     lineHeight: 20,
     marginTop: 12,
+    fontFamily: 'CG-Regular',
   },
   imageGrid: {
     marginTop: 12,
@@ -64,10 +67,12 @@ export const styles = StyleSheet.create({
   actionText: {
     color: ColorPalette.text_gray,
     marginLeft: 4,
+    fontFamily: 'CG-Regular',
   },
   timestamp: {
     color: ColorPalette.text_gray,
     fontSize: 14,
     marginLeft: 'auto',
+    fontFamily: 'CG-Regular',
   },
 });

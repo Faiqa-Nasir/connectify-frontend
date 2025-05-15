@@ -20,6 +20,7 @@ export default styles=StyleSheet.create({
     },
     uploadBtnTitle:{
         fontSize:20,
+        fontFamily:'CG-Medium',
         fontWeight:'500',
         color:ColorPallete.text_light,
         position:'absolute',

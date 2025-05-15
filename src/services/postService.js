@@ -140,21 +140,18 @@ export const validateFormDataMedia = (formData) => {
  */
 export const createPost = async (formData, retryCount = 0, onProgress = null) => {
   try {
-   
     const response = await fetch(`${BASE_URL}${POST_ENDPOINTS.CREATE}`, {
       method: 'POST',
       body: formData,
       headers: {
         Authorization: `Bearer ${await getStoredTokens().then((tokens) => tokens.access)}`,
-        // ❌ DO NOT set 'Content-Type': fetch + FormData will auto set correct boundary
       },
-      timeout: 300000, // 5 minutes for uploads
+      timeout: 300000, // 5 mins for uploads
       onUploadProgress: (progressEvent) => {
         const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         console.log(`Upload progress: ${percentCompleted}%`);
         if (onProgress) onProgress(percentCompleted);
       },
-
     });
 
     console.log('Post created successfully');
@@ -284,7 +281,7 @@ export const isVideoMedia = (mediaItem) => {
 /**
  * Calculate the time elapsed since the post was created
  * @param {string} dateString - ISO date string
- * @returns {string} - Human readable time (e.g., "2 hours ago")
+ * @returns {string} - Human readable time (e.g., "2 hs ago")
  */
 export const getTimeAgo = (dateString) => {
   const now = new Date();
@@ -293,12 +290,12 @@ export const getTimeAgo = (dateString) => {
 
   let interval = Math.floor(seconds / 31536000);
   if (interval >= 1) {
-    return interval === 1 ? '1 year ago' : `${interval} years ago`;
+    return interval === 1 ? '1 y ago' : `${interval} ys ago`;
   }
 
   interval = Math.floor(seconds / 2592000);
   if (interval >= 1) {
-    return interval === 1 ? '1 month ago' : `${interval} months ago`;
+    return interval === 1 ? '1 m ago' : `${interval} ms ago`;
   }
 
   interval = Math.floor(seconds / 86400);
@@ -308,15 +305,15 @@ export const getTimeAgo = (dateString) => {
 
   interval = Math.floor(seconds / 3600);
   if (interval >= 1) {
-    return interval === 1 ? '1 hour ago' : `${interval} hours ago`;
+    return interval === 1 ? '1 h ago' : `${interval} hs ago`;
   }
 
   interval = Math.floor(seconds / 60);
   if (interval >= 1) {
-    return interval === 1 ? '1 minute ago' : `${interval} minutes ago`;
+    return interval === 1 ? '1 min ago' : `${interval} mins ago`;
   }
 
-  return seconds < 10 ? 'just now' : `${Math.floor(seconds)} seconds ago`;
+  return seconds < 10 ? 'just now' : `${Math.floor(seconds)} s ago`;
 };
 
 /**
@@ -399,5 +396,97 @@ export const fetchTrendPosts = async (hashtag, page = 1, pageSize = 10, retryCou
         ? 'Network connection issue. Please check your internet connection.'
         : error.response?.data?.error || 'Failed to load trend posts.'
     );
+  }
+};
+
+/**
+ * Fetch announcements with pagination
+ * @param {number} page - Page number to fetch
+ * @param {number} pageSize - Number of announcements per page
+ * @param {number} retryCount - Number of retry attempts (internal use)
+ * @returns {Promise} - Promise resolving to the paginated announcements
+ */
+export const fetchAnnouncements = async (page = 1, pageSize = 10, retryCount = 0) => {
+  try {
+    const response = await api.get(POST_ENDPOINTS.ANNOUNCEMENTS, {
+      params: {
+        page,
+        page_size: pageSize,
+      },
+      timeout: 45000,
+    });
+
+    return response.data;
+  } catch (error) {
+    // Use same error handling as fetchPostFeed
+    console.error('Error fetching announcements:', error);
+
+    // Check if it's a timeout or network error
+    const isNetworkError =
+      error.message === 'Network Error' ||
+      error.code === 'ECONNABORTED' ||
+      error.message.includes('timeout');
+
+    // Retry logic for network errors (max 3 attempts)
+    if (isNetworkError && retryCount < 3) {
+      console.log(`Retrying fetch announcements (attempt ${retryCount + 1})...`);
+
+      // Exponential backoff delay: 1s, 2s, 4s
+      const delay = Math.pow(2, retryCount) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      // Retry the request
+      return fetchAnnouncements(page, pageSize, retryCount + 1);
+    }
+
+    // Format error message for the UI
+    let errorMessage;
+    if (isNetworkError) {
+      errorMessage = 'Network connection issue. Please check your internet connection and try again.';
+    } else if (error.response) {
+      // Server responded with an error status code
+      if (error.response.status === 401) {
+        errorMessage = 'Your session has expired. Please log in again.';
+      } else if (error.response.status === 403) {
+        errorMessage = "You don't have permission to access this content.";
+      } else if (error.response.status >= 500) {
+        errorMessage = 'Server error. Our team has been notified. Please try again later.';
+      } else {
+        errorMessage = `Error: ${error.response.status} - ${error.response.data?.message || 'Unknown error'}`;
+      }
+    } else {
+      errorMessage = error.message || 'An unexpected error occurred. Please try again.';
+    }
+
+    // Create a new error with the formatted message
+    const enhancedError = new Error(errorMessage);
+    enhancedError.originalError = error;
+    enhancedError.isNetworkError = isNetworkError;
+    throw enhancedError;
+  }
+};
+
+/**
+ * Update the comment count for a post
+ * @param {string|number} postId - The ID of the post to update
+ * @param {number} increment - The amount to increment/decrement (1 or -1)
+ */
+export const updatePostCommentCount = async (postId, increment) => {
+  try {
+    // First update local cache if it exists
+    const cacheKey = `post_${postId}`;
+    const cachedPostJson = await AsyncStorage.getItem(cacheKey);
+    if (cachedPostJson) {
+      const cachedPost = JSON.parse(cachedPostJson);
+      cachedPost.comments_count = (cachedPost.comments_count || 0) + increment;
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(cachedPost));
+    }
+
+    // Make API call to update comment count
+    await api.post(`${POST_ENDPOINTS.DETAILS(postId)}/update_comment_count/`, {
+      increment: increment
+    });
+  } catch (error) {
+    console.warn('Error updating post comment count:', error);
   }
 };

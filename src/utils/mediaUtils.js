@@ -46,6 +46,7 @@ export const processMediaFile = async (mediaFile) => {
 // 2️⃣ Prepare FormData
 export const prepareMediaFormData = (formData, mediaFiles) => {
   if (!mediaFiles || !Array.isArray(mediaFiles) || mediaFiles.length === 0) {
+    console.warn('No media files to append to FormData');
     return formData;
   }
 

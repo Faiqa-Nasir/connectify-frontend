@@ -1047,7 +1047,7 @@ const styles = StyleSheet.create({
   },
   username: {
     color: ColorPalette.white,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
     marginBottom: 2,
   },
   commentText: {

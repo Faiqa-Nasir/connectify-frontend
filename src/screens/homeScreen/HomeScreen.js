@@ -4,7 +4,7 @@ import {
   Text, 
   StyleSheet, 
   FlatList,
-  TouchableOpacity
+  Animated
 } from 'react-native';
 import ColorPalette from '../../constants/ColorPalette';
 import UserOnlineCircle from '../../components/UserOnlineCircle';
@@ -13,7 +13,8 @@ import { fetchPostFeed } from '../../services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenLayout from '../../components/layout/ScreenLayout';
-import PostList from '../../components/PostList';
+import PostList, { AnimatedPostList } from '../../components/PostList';
+import Header, { HEADER_HEIGHT } from '../../components/Header';
 
 // Create a memoized user circle component to prevent unnecessary re-renders
 const MemoizedUserOnlineCircle = memo(UserOnlineCircle);
@@ -62,7 +63,12 @@ const HomeScreen = ({ route, navigation }) => {
 
     // Refs for optimizing list rendering
     const userListRef = useRef(null);
-    
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const lastOffset = useRef(0);
+    const headerTranslateY = useRef(new Animated.Value(0)).current;
+    const isScrolling = useRef(false);
+    const scrollEndTimeout = useRef(null);
+
     // Memoized key extractors for better performance
     const userKeyExtractor = useCallback((item) => item.id, []);
 
@@ -92,6 +98,58 @@ const HomeScreen = ({ route, navigation }) => {
         </View>
     ), [userKeyExtractor, renderUserItem, dummyUsers]);
 
+    const handleScroll = Animated.event(
+        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+        { 
+            useNativeDriver: true,
+            listener: ({ nativeEvent }) => {
+                if (isScrolling.current) return;
+
+                const currentOffset = nativeEvent.contentOffset.y;
+                const diff = currentOffset - lastOffset.current;
+
+                // Clear any existing timeout
+                if (scrollEndTimeout.current) {
+                    clearTimeout(scrollEndTimeout.current);
+                }
+
+                // Set a new timeout
+                scrollEndTimeout.current = setTimeout(() => {
+                    lastOffset.current = currentOffset;
+                }, 100);
+
+                if (currentOffset <= 0) {
+                    Animated.spring(headerTranslateY, {
+                        toValue: 0,
+                        useNativeDriver: true,
+                        bounciness: 0
+                    }).start();
+                } else if (Math.abs(diff) > 5) { // Increased threshold
+                    isScrolling.current = true;
+                    Animated.spring(headerTranslateY, {
+                        toValue: diff > 0 ? -HEADER_HEIGHT : 0,
+                        useNativeDriver: true,
+                        bounciness: 0
+                    }).start(() => {
+                        isScrolling.current = false;
+                    });
+                }
+            }
+        }
+    );
+
+    // Enhanced cleanup
+    useEffect(() => {
+        return () => {
+            scrollY.setValue(0);
+            headerTranslateY.setValue(0);
+            isScrolling.current = false;
+            if (scrollEndTimeout.current) {
+                clearTimeout(scrollEndTimeout.current);
+            }
+        };
+    }, []);
+
     // Add refresh handling when returning from creating a post
     useFocusEffect(
         useCallback(() => {
@@ -104,29 +162,41 @@ const HomeScreen = ({ route, navigation }) => {
         }, [route.params?.refreshFeed, navigation])
     );
 
+    const handleCreatePost = () => {
+        navigation.navigate('CreatePost');
+    };
+
     return (
         <ScreenLayout 
             backgroundColor={ColorPalette.dark_bg} 
             statusBarStyle="light-content"
         >
-            <PostList
+            <Header 
+            title={currentWorkspace?.name || organizationName}
+                onCreatePost={handleCreatePost} 
+                animatedStyle={{ transform: [{ translateY: headerTranslateY }] }}
+            />
+            <AnimatedPostList
                 fetchPostsFunction={fetchHomePosts}
                 ListHeaderComponent={renderOnlineUsers}
                 navigation={navigation}
                 keyExtractorPrefix="home-post"
                 emptyText="No posts found"
-                
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                contentContainerStyle={[
+                    styles.listContainer,
+                    { paddingTop: HEADER_HEIGHT }
+                ]}
             />
-            <CreatePostButton />
         </ScreenLayout>
     );
 };
 
 const styles = StyleSheet.create({
-    // ...existing styles related to layout and online users...
     onlineUsersSection: {
         marginBottom: 10,
-        marginTop: 20,
+        marginTop: 30,
     },
     title: {
         fontSize: 18,
@@ -141,6 +211,9 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingHorizontal: 10,
+    },
+    listContainer: {
+        flexGrow: 1,
     },
 });
 
