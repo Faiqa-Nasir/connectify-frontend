@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     borderTopColor: ColorPalette.border_color,
   },
   backButtonText: {
-    color: ColorPalette.green,
+    color: ColorPalette.white,
     fontSize: 16,
     fontFamily: 'CG-Medium',
   },

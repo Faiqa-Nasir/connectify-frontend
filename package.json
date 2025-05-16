@@ -29,6 +29,7 @@
     "@reduxjs/toolkit": "^2.5.1",
     "axios": "^1.8.3",
     "dotenv": "^16.4.7",
+    "eas-cli": "^16.4.1",
     "expo": "~52.0.38",
     "expo-av": "^15.0.2",
     "expo-blur": "~14.0.3",

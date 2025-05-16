@@ -33,6 +33,7 @@ const ProfileScreen = ({ navigation, route }) => {
   const loadUserData = useCallback(async () => {
     try {
       const user = await fetchUserData();
+      console.log('User data loaded:', user);
       if (user) {
         setUserData(user);
         return user;

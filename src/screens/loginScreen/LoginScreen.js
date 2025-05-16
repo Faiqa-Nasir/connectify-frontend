@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import CustomAlert from "../../components/CustomAlert";
 import api from '../../services/apiService';
 import { BASE_URL, AUTH_ENDPOINTS } from '../../constants/ApiConstants';
+import { initializeUserData } from '../../utils/userUtils';
 
 const LoginScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -70,6 +71,10 @@ const LoginScreen = ({ navigation }) => {
           refresh: responseData.refresh
         }
       }));
+      
+      // Initialize user data and navigate to home
+      await initializeUserData();
+      navigation.navigate('Home');
       
       setAlertVisible(false); // Hide the loading alert
       // No need to navigate - the Navigator will handle this

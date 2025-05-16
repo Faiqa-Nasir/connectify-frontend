@@ -1,15 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Platform, Dimensions } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import ColorPalette from "../constants/ColorPalette";
 
-const REACTIONS = [
-  { emoji: "❤️", name: "heart" },
-  { emoji: "👍", name: "thumbs-up" },
-  { emoji: "👎", name: "thumbs-down" },
-  { emoji: "😂", name: "lol" },
-  { emoji: "❓", name: "question" },
-  { emoji: "🆗", name:"okay" },
-];
+// Common emoji reactions to show in action sheet
+const REACTIONS = ["👍", "❤️", "😂", "😯", "😢", "🙏"];
 
 const MessageActions = ({
   visible,
@@ -22,80 +17,110 @@ const MessageActions = ({
   onDelete,
   isOwnMessage,
 }) => {
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} onPress={onClose} activeOpacity={1}>
-        <View style={styles.container}>
-          {/* Reactions */}
-          <View style={styles.reactionsContainer}>
-            {REACTIONS.map((reaction) => (
-              <TouchableOpacity
-                key={reaction.name}
-                style={styles.reactionButton}
-                onPress={() => {
-                  onReact(reaction.name);
-                  onClose();
-                }}
-              >
-                <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.overlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.actionSheet}>
+              {/* Reactions */}
+              <View style={styles.reactionsContainer}>
+                {REACTIONS.map((emoji, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.reactionButton}
+                    onPress={() => onReact(emoji)}
+                  >
+                    <Text style={styles.reactionEmoji}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-          {/* Actions */}
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity style={styles.actionButton} onPress={onReply}>
-              <Feather name="corner-up-left" size={20} color="#FFFFFF" />
-              <Text style={styles.actionText}>Reply</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} onPress={onThreadReply}>
-              <Feather name="message-square" size={20} color="#FFFFFF" />
-              <Text style={styles.actionText}>Thread Reply</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} onPress={onCopy}>
-              <Feather name="copy" size={20} color="#FFFFFF" />
-              <Text style={styles.actionText}>Copy Message</Text>
-            </TouchableOpacity>
-
-            {isOwnMessage && onEdit && (
-              <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
-                <Feather name="edit-2" size={20} color="#FFFFFF" />
-                <Text style={styles.actionText}>Edit Message</Text>
-              </TouchableOpacity>
-            )}
-
-            {isOwnMessage && onDelete && (
-              <TouchableOpacity style={styles.actionButton} onPress={onDelete}>
-                <Feather name="trash-2" size={20} color="#FF3B30" />
-                <Text style={[styles.actionText, styles.deleteText]}>Delete Message</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+              {/* Actions */}
+              <View style={styles.actionsContainer}>
+                <ActionButton
+                  icon="reply-outline"
+                  label="Reply"
+                  onPress={onReply}
+                />
+                <ActionButton
+                  icon="git-branch-outline"
+                  label="Thread Reply"
+                  onPress={onThreadReply}
+                />
+                <ActionButton
+                  icon="copy-outline"
+                  label="Copy"
+                  onPress={onCopy}
+                />
+                {isOwnMessage && (
+                  <>
+                    <ActionButton
+                      icon="pencil-outline"
+                      label="Edit"
+                      onPress={onEdit}
+                    />
+                    <ActionButton
+                      icon="trash-outline"
+                      label="Delete"
+                      onPress={onDelete}
+                      isDestructive
+                    />
+                  </>
+                )}
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </TouchableOpacity>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 };
 
+// Action button component to avoid repetition
+const ActionButton = ({ icon, label, onPress, isDestructive = false }) => (
+  <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+    <Ionicons
+      name={icon}
+      size={22}
+      color={isDestructive ? ColorPalette.red : ColorPalette.text_white}
+    />
+    <Text
+      style={[
+        styles.actionLabel,
+        isDestructive && { color: ColorPalette.red },
+      ]}
+    >
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
-  container: {
-    width: Dimensions.get("window").width * 0.9,
-    backgroundColor: "#1C1E22",
-    borderRadius: 12,
+  actionSheet: {
+    width: "80%",
+    backgroundColor: ColorPalette.card_bg,
+    borderRadius: 16,
     overflow: "hidden",
+    paddingVertical: 16,
   },
   reactionsContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
-    padding: 16,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
@@ -106,21 +131,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   actionsContainer: {
-    padding: 8,
+    paddingTop: 12,
   },
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
-  actionText: {
-    color: "#FFFFFF",
+  actionLabel: {
+    marginLeft: 12,
+    color: ColorPalette.text_white,
     fontSize: 16,
-    fontFamily: Platform.OS === "ios" ? "Helvetica" : "sans-serif",
-  },
-  deleteText: {
-    color: "#FF3B30",
+    fontFamily: "CG-Medium",
   },
 });
 
