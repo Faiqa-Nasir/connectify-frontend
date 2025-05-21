@@ -1,6 +1,54 @@
 import api from './apiService';
-import { BASE_URL, POST_ENDPOINTS } from '../constants/ApiConstants';
+import { BASE_URL, BASE_URL_AI, POST_ENDPOINTS } from '../constants/ApiConstants';
 import { getStoredTokens } from './tokenService';
+import axios from 'axios';
+import { Alert } from 'react-native'; 
+import * as FileSystem from 'expo-file-system';
+
+let showPostBlockedPopup = null;
+export const setPostBlockedPopupHandler = (handler) => {
+  showPostBlockedPopup = handler;
+};
+
+// Predict text safety
+const predictText = async (text) => {
+  try {
+    const response = await axios.post(`${BASE_URL_AI}/predict`, { text });
+    return response.data.is_safe;
+  } catch (error) {
+    console.error('Text prediction error:', error);
+    return true; // Fail-safe: treat as safe to avoid blocking all
+  }
+};
+
+// Predict image safety
+const predictImage = async (base64Image) => {
+  try {
+    const response = await axios.post(`${BASE_URL_AI}/predict_image`, {
+      image: base64Image,
+    });
+    return response.data.is_safe;
+  } catch (error) {
+    console.error('Image prediction error:', error);
+    return true;
+  }
+};
+
+const fileToBase64 = async (media) => {
+  if (media.base64) {
+    return media.base64.startsWith('data:') ? media.base64 : `data:image/jpeg;base64,${media.base64}`;
+  }
+  console.log('(NOBRIDGE) LOG Converting URI to base64:', media.uri);
+  try {
+    const base64 = await FileSystem.readAsStringAsync(media.uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    return `data:image/jpeg;base64,${base64}`;
+  } catch (error) {
+    console.error('(NOBRIDGE) ERROR Failed to convert URI to base64:', error);
+    return null;
+  }
+};
 
 /**
  * Fetch the user's post feed with pagination
@@ -138,34 +186,69 @@ export const validateFormDataMedia = (formData) => {
  * @param {Function} onProgress - Optional callback for upload progress
  * @returns {Promise} - Promise resolving to the created post
  */
-export const createPost = async (formData, retryCount = 0, onProgress = null) => {
+export const createPost = async (formData, mediaFiles = [], retryCount = 0, onProgress = null, isAnnouncement = false) => {
   try {
+    const text = formData.get('content') || '';
+    console.log('(NOBRIDGE) LOG Content being validated:', text);
+    const isTextSafe = await predictText(text);
+    console.log('(NOBRIDGE) LOG predictText result:', isTextSafe);
+    if (!isTextSafe) {
+      console.log('(NOBRIDGE) LOG Text flagged as inappropriate');
+      if (showPostBlockedPopup) {
+        showPostBlockedPopup('Inappropriate or harmful text detected. Please modify your post.');
+      } else {
+        Alert.alert('Post Blocked', 'Inappropriate or harmful text detected.');
+      }
+      return null;
+    }
+
+    for (const media of mediaFiles) {
+      console.log('(NOBRIDGE) LOG Checking media file:', JSON.stringify(media, null, 2));
+      if (media.type === 'video/mp4') {
+        console.log('(NOBRIDGE) LOG Skipping moderation for video:', media);
+        continue; // Skip videos
+      }
+      if (!media.base64) {
+        console.log('(NOBRIDGE) WARN Image missing base64, attempting to generate:', media);
+        const base64Image = await fileToBase64(media);
+        if (!base64Image) {
+          console.log('(NOBRIDGE) WARN Failed to generate base64, skipping:', media);
+          continue;
+        }
+        media.base64 = base64Image;
+      }
+      console.log('(NOBRIDGE) LOG Predicting image');
+      const base64Image = media.base64.startsWith('data:') ? media.base64 : `data:image/jpeg;base64,${media.base64}`;
+      const isImageSafe = await predictImage(base64Image);
+      if (!isImageSafe) {
+        console.log('(NOBRIDGE) LOG Image not safe');
+        if (showPostBlockedPopup) {
+          showPostBlockedPopup('Inappropriate image(s) detected. Please remove or replace them.');
+        } else {
+          Alert.alert('Post Blocked', 'Inappropriate image(s) detected.');
+        }
+        return null;
+      }
+    }
+
     const response = await fetch(`${BASE_URL}${POST_ENDPOINTS.CREATE}`, {
       method: 'POST',
       body: formData,
       headers: {
         Authorization: `Bearer ${await getStoredTokens().then((tokens) => tokens.access)}`,
       },
-      timeout: 300000, // 5 mins for uploads
-      onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        console.log(`Upload progress: ${percentCompleted}%`);
-        if (onProgress) onProgress(percentCompleted);
-      },
     });
 
-    console.log('Post created successfully');
+    if (!response.ok) throw new Error('Failed to create post');
     return response.json();
   } catch (error) {
-    console.error('Error creating post:', error);
-
+    console.error('(NOBRIDGE) ERROR Post creation failed:', error);
     if (retryCount < 2) {
-      console.log(`Retrying create post (attempt ${retryCount + 1})...`);
+      console.log(`(NOBRIDGE) LOG Retrying create post (attempt ${retryCount + 1})...`);
       await new Promise((resolve) => setTimeout(resolve, Math.pow(2, retryCount + 1) * 1000));
-      return createPost(formData, retryCount + 1, onProgress);
+      return createPost(formData, mediaFiles, retryCount + 1, onProgress, isAnnouncement);
     }
-
-    throw new Error(error.response?.data || 'Failed to create post. Please try again.');
+    throw error;
   }
 };
 

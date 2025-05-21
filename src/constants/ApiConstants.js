@@ -1,8 +1,8 @@
 // export const BASE_URL = 'http://192.168.1.11:8000';
-export const BASE_IP = '192.168.137.21';
+export const BASE_IP = '192.168.100.11';
 export const BASE_URL = `http://${BASE_IP}:8000`;
 export const BASE_URL_WS = `ws://${BASE_IP}:8001/ws/conversations/`;
-
+export const BASE_URL_AI = `http://${BASE_IP}:5000`;
 
 export const AUTH_ENDPOINTS = {
   LOGIN: '/api/auth/login/',

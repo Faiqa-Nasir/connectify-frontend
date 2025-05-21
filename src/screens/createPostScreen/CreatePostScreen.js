@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import ColorPalette from '../../constants/ColorPalette';
-import { createPost } from '../../services/postService';
+import { createPost, setPostBlockedPopupHandler } from '../../services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TaggedUserItem from './components/TaggedUserItem';
 import HashtagsInput from './components/HashtagsInput';
@@ -26,6 +26,8 @@ import ScreenLayout from '../../components/layout/ScreenLayout';
 import { useNavigation } from '@react-navigation/native';
 import { fetchUserData } from '../../utils/userUtils';
 import * as FileSystem from 'expo-file-system';
+import PostBlockPopup from './components/PostBlockPopup'; 
+
 import { processMediaFile, prepareMediaFormData,validateMediaFile } from '../../utils/mediaUtils';
 const CreatePostScreen = ({ navigation, route }) => {
     const postType = route.params?.postType || 'post';
@@ -37,7 +39,9 @@ const CreatePostScreen = ({ navigation, route }) => {
     const [taggedUsers, setTaggedUsers] = useState([]);
     const [hashtags, setHashtags] = useState([]);
     const [isPublic, setIsPublic] = useState(true);
-    
+    const [showBlockPopup, setShowBlockPopup] = useState(false); 
+    const [blockMessage, setBlockMessage] = useState('');
+
     // UI state
     const [isLoading, setIsLoading] = useState(false);
     const [isMediaLoading, setIsMediaLoading] = useState(false); // New state for media loading
@@ -71,6 +75,17 @@ const CreatePostScreen = ({ navigation, route }) => {
       loadWorkspace();
     }, []);
     
+    useEffect(() => {
+      setPostBlockedPopupHandler((message) => {
+        setBlockMessage(message);
+        setShowBlockPopup(true);
+      });
+
+      return () => {
+        setPostBlockedPopupHandler(null);
+      };
+    }, []);
+
     // Request media library permissions
     useEffect(() => {
       const requestPermissions = async () => {
@@ -96,6 +111,7 @@ const CreatePostScreen = ({ navigation, route }) => {
           mediaTypes: ImagePicker.MediaTypeOptions.All,
           allowsMultipleSelection: true,
           quality: 0.8,
+          base64: true,
           selectionLimit: 5 - mediaFiles.length, // Limit total to 5 files
         });
         
@@ -191,57 +207,59 @@ const CreatePostScreen = ({ navigation, route }) => {
 
     // Submit the post to the API
     const handleSubmitPost = useCallback(async () => {
-        if (!validatePost()) {
-            return;
+      if (!validatePost()) {
+        return;
+      }
+
+      setIsSubmitting(true);
+      setErrorMessage('');
+
+      try {
+        const processedFiles = [];
+        for (const media of mediaFiles) {
+          const processed = await processMediaFile(media);
+          validateMediaFile(processed);
+          processedFiles.push(processed);
         }
-        
-        setIsSubmitting(true);
-        setErrorMessage('');
-        
-        try {
-            // Step 1: Process and validate media files
-            const processedFiles = [];
-            for (const media of mediaFiles) {
-                const processed = await processMediaFile(media);
-                validateMediaFile(processed);
-                processedFiles.push(processed);
-            }
 
-            // Step 2: Prepare FormData
-            const formData = new FormData();
-            formData.append('content', content);
-            formData.append('organization_id', currentWorkspace?.id || currentWorkspace);
-            formData.append('type', route.params?.postType || 'post'); // Set type based on route params
-            formData.append('ispublic', isPublic);
+        const formData = new FormData();
+        formData.append('content', content);
+        formData.append('organization_id', currentWorkspace?.id || currentWorkspace);
+        formData.append('type', route.params?.postType || 'post');
+        formData.append('ispublic', isPublic);
 
-            if (taggedUsers.length > 0) {
-                const taggedUserIds = taggedUsers.map((user) => user.id);
-                formData.append('tagged_user_ids', JSON.stringify(taggedUserIds));
-            }
-
-            prepareMediaFormData(formData, processedFiles);
-            
-            // Step 3: Upload using appropriate endpoint
-            const response = await createPost(formData, 0, (progress) => {
-                setUploadProgress(progress);
-            }, isAnnouncement);
-
-            const data = await response;
-            console.log('Upload Success:', data);
-
-            // Navigate back to appropriate screen
-            const targetScreen = isAnnouncement ? 'NoticeBoard' : 'Home';
-            navigation.reset({
-                index: 0,
-                routes: [{ name: targetScreen, params: { refreshFeed: true } }],
-            });
-
-        } catch (error) {
-            console.error('Upload Failed:', error);
-            setErrorMessage(error.message || 'Failed to create post. Please try again.');
-        } finally {
-            setIsSubmitting(false);
+        if (taggedUsers.length > 0) {
+          const taggedUserIds = taggedUsers.map((user) => user.id);
+          formData.append('tagged_user_ids', JSON.stringify(taggedUserIds));
         }
+
+        prepareMediaFormData(formData, processedFiles);
+
+        console.log('(NOBRIDGE) LOG processedFiles before createPost:', JSON.stringify(processedFiles, null, 2));
+        const response = await createPost(formData, processedFiles, 0, (progress) => {
+          setUploadProgress(progress);
+        }, isAnnouncement);
+
+        if (response === null) {
+          console.log('(NOBRIDGE) LOG createPost returned null, likely due to content moderation');
+          setErrorMessage('Post blocked due to inappropriate content. Please modify and try again.');
+          return;
+        }
+
+        const data = await response;
+        console.log('(NOBRIDGE) LOG Upload Success:', data);
+
+        const targetScreen = isAnnouncement ? 'NoticeBoard' : 'Home';
+        navigation.reset({
+          index: 0,
+          routes: [{ name: targetScreen, params: { refreshFeed: true } }],
+        });
+      } catch (error) {
+        console.error('(NOBRIDGE) ERROR Upload Failed:', error);
+        setErrorMessage(error.message || 'Failed to create post. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
     }, [validatePost, content, currentWorkspace, isPublic, taggedUsers, mediaFiles, navigation, postType]);
 
     // Background upload function
@@ -494,6 +512,13 @@ const CreatePostScreen = ({ navigation, route }) => {
             onClose={() => setShowUserSearchModal(false)}
             onSelectUser={handleAddUser}
             organizationId={currentWorkspace?.id}
+          />
+
+          {/* Add PostBlockPopup */}
+          <PostBlockPopup
+            visible={showBlockPopup}
+            onClose={() => setShowBlockPopup(false)}
+            message={blockMessage}
           />
           
           {/* Loading overlay when submitting */}
