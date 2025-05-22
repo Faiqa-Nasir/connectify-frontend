@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import CustomAlert from "../../components/CustomAlert";
 import api from '../../services/apiService';
 import { BASE_URL, AUTH_ENDPOINTS } from '../../constants/ApiConstants';
+import { initializeUserData } from '../../utils/userUtils';
 
 const LoginScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -70,6 +71,10 @@ const LoginScreen = ({ navigation }) => {
           refresh: responseData.refresh
         }
       }));
+      
+      // Initialize user data and navigate to home
+      await initializeUserData();
+      navigation.navigate('Home');
       
       setAlertVisible(false); // Hide the loading alert
       // No need to navigate - the Navigator will handle this
@@ -208,9 +213,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: ColorPalette.text_black,
     marginBottom: 10,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
     textAlign: 'center',
-    fontWeight: '100',
     marginTop: 20,
   },
   rememberForgotContainer: {
@@ -254,7 +258,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 10,
     color: ColorPalette.green,
-    fontFamily: 'CG-Semibold',
+    fontFamily: 'CG-Medium',
   },
   errorText: {
     color: 'red',

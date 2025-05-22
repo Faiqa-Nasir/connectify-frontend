@@ -14,7 +14,8 @@ import api from '../../services/apiService';
 import { POST_ENDPOINTS } from '../../constants/ApiConstants';
 import ScreenLayout from '../../components/layout/ScreenLayout';
 import PostList from '../../components/PostList';
-import { fetchUserData } from '../../utils/userUtils';
+import { fetchUserData, updateUserData } from '../../utils/userUtils';
+import Header, { HEADER_HEIGHT } from '../../components/Header';
 
 const ProfileScreen = ({ navigation, route }) => {
   const [userData, setUserData] = useState(null);
@@ -32,6 +33,7 @@ const ProfileScreen = ({ navigation, route }) => {
   const loadUserData = useCallback(async () => {
     try {
       const user = await fetchUserData();
+      console.log('User data loaded:', user);
       if (user) {
         setUserData(user);
         return user;
@@ -40,14 +42,6 @@ const ProfileScreen = ({ navigation, route }) => {
       console.error('Error loading user data:', error);
     }
     return null;
-  }, []);
-
-  // Handle real-time updates to post count
-  const handlePostCountChange = useCallback((count) => {
-    setStats(prev => ({
-      ...prev,
-      postCount: count
-    }));
   }, []);
 
   // Wrapper function for the PostList component
@@ -60,11 +54,11 @@ const ProfileScreen = ({ navigation, route }) => {
         }
       });
       
-      // Update post count in stats
-      if (pageNumber === 1) {
+      // Update post count directly from API response
+      if (response.data?.count !== undefined) {
         setStats(prev => ({
           ...prev,
-          postCount: response.data.count || 0
+          postCount: response.data.count
         }));
       }
       
@@ -118,6 +112,32 @@ const ProfileScreen = ({ navigation, route }) => {
     }
   }, [route.params?.refresh, navigation]);
 
+// Update userData if updated data is passed via navigation
+useEffect(() => {
+  if (route.params?.updatedUser) {
+    console.log('New userData received:', route.params.updatedUser);
+    
+    const updateProfile = async () => {
+      try {
+        // Update AsyncStorage and get the updated data
+        const updatedData = await updateUserData(route.params.updatedUser);
+        console.log('Updated storage with:', updatedData);
+        
+        // Update local state
+        setUserData(updatedData);
+        
+        // Force a re-render
+        setLoading(prev => !prev);
+      } catch (error) {
+        console.error('Error updating profile:', error);
+      }
+    };
+    
+    updateProfile();
+    navigation.setParams({ updatedUser: undefined });
+  }
+}, [route.params?.updatedUser]);
+
   // Navigate to account settings
   const navigateToAccountSettings = () => {
     navigation.navigate('Account');
@@ -135,13 +155,14 @@ const ProfileScreen = ({ navigation, route }) => {
   const renderHeader = () => (
     <>
       <View style={styles.profileHeader}>
-        {/* User Info Section - This will be duplicated for the sticky version */}
+        {/* User Info Section */}
         <View style={styles.userInfoContainer}>
           <View style={styles.avatarContainer}>
-            {userData?.profileImage ? (
+            {userData?.profile_image ? (
               <Image 
-                source={{ uri: userData.profileImage }} 
-                style={styles.avatar} 
+                source={{ uri: userData.profile_image }} 
+                style={styles.avatar}
+                key={userData.profile_image} // Force image refresh
               />
             ) : (
               <View style={styles.avatarPlaceholder}>
@@ -187,65 +208,62 @@ const ProfileScreen = ({ navigation, route }) => {
     </>
   );
 
-  // Render the sticky user info bar
-  const renderStickyUserInfo = () => (
-    <View style={[styles.stickyUserInfoContainer, isUserInfoSticky ? styles.stickyActive : styles.stickyHidden]}>
-      <View style={styles.stickyAvatarContainer}>
-        {userData?.profileImage ? (
-          <Image 
-            source={{ uri: userData.profileImage }} 
-            style={styles.stickyAvatar} 
-          />
-        ) : (
-          <View style={styles.stickyAvatarPlaceholder}>
-            <Text style={styles.stickyAvatarText}>
-              {userData?.first_name?.charAt(0) || userData?.email?.charAt(0) || '?'}
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.stickyUserInfo}>
-        <Text style={styles.stickyUserName}>
-          {userData ? `${userData.first_name} ${userData.last_name}` : 'Loading...'}
-        </Text>
-        <Text style={styles.stickyUserHandle}>@{userData?.username || 'username'}</Text>
-      </View>
-      <View style={styles.stickyPostsCountWrapper}>
-        <Text style={styles.stickyStatNumber}>{stats.postCount}</Text>
-        <Text style={styles.stickyStatLabel}>Posts</Text>
-      </View>
+// Render the sticky user info bar
+const renderStickyUserInfo = () => (
+  <View style={[styles.stickyUserInfoContainer, isUserInfoSticky ? styles.stickyActive : styles.stickyHidden]}>
+    <View style={styles.stickyAvatarContainer}>
+      {userData?.profile_image ? (
+        <Image 
+          source={{ uri: userData.profile_image }} 
+          style={styles.stickyAvatar} 
+        />
+      ) : (
+        <View style={styles.stickyAvatarPlaceholder}>
+          <Text style={styles.stickyAvatarText}>
+            {userData?.first_name?.charAt(0) || userData?.email?.charAt(0) || '?'}
+          </Text>
+        </View>
+      )}
     </View>
-  );
+    <View style={styles.stickyUserInfo}>
+      <Text style={styles.stickyUserName}>
+        {userData ? `${userData.first_name} ${userData.last_name}` : 'Loading...'}
+      </Text>
+      <Text style={styles.stickyUserHandle}>@{userData?.username || 'username'}</Text>
+    </View>
+    <View style={styles.stickyPostsCountWrapper}>
+      <Text style={styles.stickyStatNumber}>{stats.postCount}</Text>
+      <Text style={styles.stickyStatLabel}>Posts</Text>
+    </View>
+  </View>
+);
+
 
   return (
     <ScreenLayout 
       backgroundColor={ColorPalette.main_black} 
       statusBarStyle="light-content"
     >
-      {/* Header with title and account button */}
-      <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>My Profile</Text>
-        <TouchableOpacity 
-          style={styles.settingsButton}
-          onPress={navigateToAccountSettings}
-        >
-          <Ionicons name="settings-outline" size={24} color={ColorPalette.white} />
-        </TouchableOpacity>
-      </View>
-      
-      {/* Sticky User Info that appears when scrolling */}
-      {renderStickyUserInfo()}
-      
-      {/* Use our new PostList component with the onPostCountChange prop */}
-      <PostList
-        fetchPostsFunction={fetchUserPosts}
-        ListHeaderComponent={renderHeader}
-        navigation={navigation}
-        onScroll={handleScroll}
-        keyExtractorPrefix="profile-post"
-        emptyText="No posts yet"
-        onPostCountChange={handlePostCountChange}
+      <Header 
+        title="My Profile"
+        showCreateButton={false}
+        rightIcon={<Ionicons name="settings-outline" size={24} color={ColorPalette.white} />}
+        onRightPress={navigateToAccountSettings}
+        animatedStyle={{ transform: [{ translateY: 0 }] }}
       />
+
+      {/* Remove old header code and adjust container styles */}
+      <View style={{ flex: 1, marginTop: HEADER_HEIGHT }}>
+        {renderStickyUserInfo()}
+        <PostList
+          fetchPostsFunction={fetchUserPosts}
+          ListHeaderComponent={renderHeader}
+          navigation={navigation}
+          onScroll={handleScroll}
+          keyExtractorPrefix="profile-post"
+          emptyText="No posts yet"
+        />
+      </View>
     </ScreenLayout>
   );
 };
@@ -254,23 +272,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: ColorPalette.main_black,
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: ColorPalette.border_color || '#2A2A2A',
-  },
-  headerTitle: {
-    color: ColorPalette.white,
-    fontSize: 18,
-    fontFamily: 'CG-Medium',
-  },
-  settingsButton: {
-    padding: 8,
   },
   listContent: {
     flexGrow: 1,
@@ -403,10 +404,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: ColorPalette.border_color || '#2A2A2A',
     position: 'absolute',
-    top: 40, // Just below the header container
+    top: -50, // Just below the header container
     left: 0,
     right: 0,
-    zIndex: 100,
+    zIndex: 10000
   },
   stickyActive: {
     opacity: 1,

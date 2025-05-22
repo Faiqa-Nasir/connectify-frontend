@@ -7,10 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons/';
 const CustomInput = ({ placeholder, secureTextEntry, onChangeText }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [fontsLoaded] = useFonts({
-    'CG-Regular': require('../../assets/fonts/ClashGrotesk-Regular.otf'),
-    'CG-Bold': require('../../assets/fonts/ClashGrotesk-Bold.otf'),
-    'CG-Semibold': require('../../assets/fonts/ClashGrotesk-Semibold.otf'),
-    'CG-Medium': require('../../assets/fonts/ClashGrotesk-Medium.otf'),
+    'CG-Medium': require('../../assets/fonts/GoogleSans-Medium.ttf'),
   });
   const [isPasswordVisible, setIsPasswordVisible] = useState(!secureTextEntry);
 

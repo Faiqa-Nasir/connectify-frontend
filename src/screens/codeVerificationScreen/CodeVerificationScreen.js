@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         marginBottom: 16,
         textAlign: "center",
-        fontFamily: 'CG-Semibold',
+        fontFamily: 'CG-Medium',
     },
     subtitle: {
         fontSize: 16,

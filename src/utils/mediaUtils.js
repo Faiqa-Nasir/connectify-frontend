@@ -4,7 +4,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 // 1️⃣ Process & compress file
 export const processMediaFile = async (mediaFile) => {
   try {
-    const { uri, type } = mediaFile;
+    const { uri, type, base64 } = mediaFile;
     const fileName = uri.split('/').pop();
     let mimeType = type || (uri.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg');
 
@@ -22,23 +22,35 @@ export const processMediaFile = async (mediaFile) => {
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
       );
 
+      // Generate base64 for the manipulated image
+      let newBase64 = base64;
+      try {
+        newBase64 = await FileSystem.readAsStringAsync(manipulatedImage.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+      } catch (error) {
+        console.warn('(NOBRIDGE) WARN Failed to generate base64 for manipulated image:', error);
+        newBase64 = base64;
+      }
+
       return {
         uri: manipulatedImage.uri,
         name: fileName,
-        type: 'image/jpeg', // After manipulation, it's always JPEG
-        size: fileInfo.size
+        type: 'image/jpeg',
+        size: fileInfo.size,
+        base64: newBase64 // Preserve or generate base64
       };
     }
 
-    // For videos, return original info
+    // For videos, return original info 
     return {
       uri,
       name: fileName,
       type: mimeType,
-      size: fileInfo.size
+      size: fileInfo.size,
     };
   } catch (error) {
-    console.error('Error processing media file:', error);
+    console.error('(NOBRIDGE) ERROR Error processing media file:', error);
     throw new Error('Failed to process media file');
   }
 };
@@ -46,20 +58,21 @@ export const processMediaFile = async (mediaFile) => {
 // 2️⃣ Prepare FormData
 export const prepareMediaFormData = (formData, mediaFiles) => {
   if (!mediaFiles || !Array.isArray(mediaFiles) || mediaFiles.length === 0) {
+    console.warn('(NOBRIDGE) WARN No media files to append to FormData');
     return formData;
   }
 
   mediaFiles.forEach((file) => {
     let mimeType = file.type;
-
-    // Ensure valid MIME type
     if (!mimeType || mimeType === 'image') mimeType = 'image/jpeg';
     if (mimeType === 'video') mimeType = 'video/mp4';
 
+    console.log('(NOBRIDGE) LOG Appending media file to FormData:', JSON.stringify(file, null, 2));
     formData.append('media', {
       uri: file.uri,
       name: file.name,
       type: mimeType,
+      ...(mimeType.startsWith('image/') && file.base64 && { base64: file.base64 }) // Include base64 only for images
     });
   });
 

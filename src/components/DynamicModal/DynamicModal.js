@@ -7,7 +7,8 @@ import {
   Animated, 
   StyleSheet, 
   Dimensions, 
-  TouchableOpacity
+  TouchableOpacity,
+  ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ColorPalette from '../../constants/ColorPalette';
@@ -92,8 +93,6 @@ const DynamicModal = ({
           >
             {/* Header with title and close button */}
             <View style={styles.header}>
-              <View style={styles.dragIndicator} />
-              
               <Text style={styles.title}>{title}</Text>
               
               {showCloseIcon && (
@@ -109,11 +108,13 @@ const DynamicModal = ({
                 {children}
               </View>
             ) : (
-              <View 
+              <ScrollView 
                 style={[styles.contentContainer, contentContainerStyle]}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
               >
                 {children}
-              </View>
+              </ScrollView>
             )}
           </Animated.View>
         </PanGestureHandler>
@@ -145,34 +146,22 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
     paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    position: 'relative',
-  },
-  dragIndicator: {
-    position: 'absolute',
-    top: 0,
-    width: 50,
-    height: 5,
-    backgroundColor: ColorPalette.grey_text,
-    borderRadius: 3,
-    alignSelf: 'center',
+    borderBottomColor: ColorPalette.border_color,
   },
   title: {
-    fontSize: 18,
-    fontFamily: 'CG-Medium',
+    fontSize: 20,
     color: ColorPalette.white,
+    fontFamily: 'CG-Medium',
+    textAlign: 'left',
     flex: 1,
-    textAlign: 'center',
   },
   closeButton: {
-    position: 'absolute',
-    right: 16,
-    padding: 5,
+    padding: 4,
   },
   contentContainer: {
     flex: 1,

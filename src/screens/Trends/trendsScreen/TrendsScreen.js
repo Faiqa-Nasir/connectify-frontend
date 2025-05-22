@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { AntDesign } from '@expo/vector-icons';
@@ -8,6 +8,11 @@ import ColorPalette from '../../../constants/ColorPalette';
 import TrendItem from '../../../components/TrendItem/trendItem.js';
 import { fetchTrends } from '../../../services/postService';
 import ScreenLayout from '../../../components/layout/ScreenLayout';
+import Header, { HEADER_HEIGHT } from '../../../components/Header';
+
+// Create animated FlatList component
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
+
 // const SectionHeader = () => (
 //   <View style={styles.sectionHeader}>
 //     <Text style={styles.sectionTitle}>Popular Trends</Text>
@@ -55,6 +60,13 @@ export default function TrendsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [featuredTrend, setFeaturedTrend] = useState(null);
 
+  // Add animation related refs
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const lastOffset = useRef(0);
+  const headerTranslateY = useRef(new Animated.Value(0)).current;
+  const isScrolling = useRef(false);
+  const scrollEndTimeout = useRef(null);
+
   const loadTrends = async (showLoader = true) => {
     if (showLoader) setLoading(true);
     try {
@@ -88,6 +100,57 @@ export default function TrendsScreen() {
 
   useEffect(() => {
     loadTrends();
+  }, []);
+
+  // Add scroll handler
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { 
+      useNativeDriver: true,
+      listener: ({ nativeEvent }) => {
+        if (isScrolling.current) return;
+
+        const currentOffset = nativeEvent.contentOffset.y;
+        const diff = currentOffset - lastOffset.current;
+
+        if (scrollEndTimeout.current) {
+          clearTimeout(scrollEndTimeout.current);
+        }
+
+        scrollEndTimeout.current = setTimeout(() => {
+          lastOffset.current = currentOffset;
+        }, 100);
+
+        if (currentOffset <= 0) {
+          Animated.spring(headerTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 0
+          }).start();
+        } else if (Math.abs(diff) > 5) {
+          isScrolling.current = true;
+          Animated.spring(headerTranslateY, {
+            toValue: diff > 0 ? -HEADER_HEIGHT : 0,
+            useNativeDriver: true,
+            bounciness: 0
+          }).start(() => {
+            isScrolling.current = false;
+          });
+        }
+      }
+    }
+  );
+
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      scrollY.setValue(0);
+      headerTranslateY.setValue(0);
+      isScrolling.current = false;
+      if (scrollEndTimeout.current) {
+        clearTimeout(scrollEndTimeout.current);
+      }
+    };
   }, []);
 
   const renderTrendItem = ({ item, index }) => {
@@ -141,21 +204,26 @@ export default function TrendsScreen() {
 
   return (
     <ScreenLayout backgroundColor={ColorPalette.dark_bg} statusBarStyle="light-content">
+      <Header 
+        title="Trends"
+        showCreateButton={false}
+        animatedStyle={{ transform: [{ translateY: headerTranslateY }] }}
+      />
       <View style={styles.container}>
-        <FlatList
+        <AnimatedFlatList
           data={trends}
           renderItem={renderTrendItem}
           keyExtractor={item => item.hashtag}
           ListHeaderComponent={() => (
             <>
               <FeaturedEvent trend={featuredTrend} />
-              {/* <SectionHeader /> */}
             </>
           )}
           ListEmptyComponent={renderEmptyState}
           contentContainerStyle={[
             styles.trendsListContainer,
-            trends.length === 0 && { flex: 1 }
+            trends.length === 0 && { flex: 1 },
+            { paddingTop: HEADER_HEIGHT }
           ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -166,6 +234,8 @@ export default function TrendsScreen() {
               colors={[ColorPalette.gradient_text]}
             />
           }
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
         />
 
         <TouchableOpacity 

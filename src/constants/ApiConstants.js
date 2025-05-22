@@ -1,4 +1,8 @@
-export const BASE_URL = 'http://192.168.1.11:8000'; // Replace with your actual API base URL
+// export const BASE_URL = 'http://192.168.1.11:8000';
+export const BASE_IP = '192.168.100.11';
+export const BASE_URL = `http://${BASE_IP}:8000`;
+export const BASE_URL_WS = `ws://${BASE_IP}:8001/ws/conversations/`;
+export const BASE_URL_AI = `http://${BASE_IP}:5000`;
 
 export const AUTH_ENDPOINTS = {
   LOGIN: '/api/auth/login/',
@@ -21,6 +25,7 @@ export const POST_ENDPOINTS = {
   DELETE: (postId) => `/api/posts/${postId}/delete/`,
   TRENDS: '/api/posts/trends/',
   TREND_POSTS: (hashtag) => `/api/posts/trend/${hashtag}/`,
+  ANNOUNCEMENTS: '/api/posts/announcements/',
 };
 
 export const COMMENT_ENDPOINTS = {
@@ -37,7 +42,33 @@ export const REACTION_ENDPOINTS = {
   UNREACT: (postId) => `/api/posts/${postId}/unreact/`,
 };
 
-// We can remove this or keep it for future endpoints
+// User specific endpoints
 export const USER_ENDPOINTS = {
+  UPDATE_PROFILE: '/api/auth/profile/update/',
+  PROFILE: '/api/auth/profile/',  // Add this endpoint for getting user profile
   // User specific endpoints can be added here as needed
+};
+
+// Messaging endpoints
+export const MESSAGING_ENDPOINTS = {
+  // Conversations (One-to-One)
+  CONVERSATIONS: '/api/messaging/conversations/',
+  CONVERSTATIONS_CREATE: '/api/messaging/conversations/create/',
+
+  CONVERSATION_DETAIL: (id) => `/api/messaging/conversations/${id}/`,
+  CONVERSATION_MESSAGES: (id) => `/api/messaging/conversations/${id}/messages/`,
+  SEND_MESSAGE: (id) => `/api/messaging/conversations/${id}/send_message/`,
+  DELETE_CONVERSATION: (id) => `/api/messaging/conversations/${id}/`,
+
+  // Messages
+  MESSAGE_DETAIL: (id) => `/api/messaging/messages/${id}/`,
+  EDIT_MESSAGE: (id) => `/api/messaging/messages/${id}/edit/`,
+  DELETE_MESSAGE: (id) => `/api/messaging/messages/${id}/`,
+  REACT_TO_MESSAGE: (id) => `/api/messaging/messages/${id}/react/`,
+  REMOVE_REACTION: (id) => `/api/messaging/messages/${id}/unreact/`,
+
+  // User Blocking
+  BLOCKS: '/api/messaging/blocks/',
+  BLOCK_USER: '/api/messaging/blocks/',
+  UNBLOCK_USER: (id) => `/api/messaging/blocks/${id}/`,
 };

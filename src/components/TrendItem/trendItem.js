@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
   postsMask: {
     fontSize: 14,
-    fontWeight: 'semibold',
+    fontFamily: 'CG-Medium',
     backgroundColor: 'transparent',
     marginTop: 4,
   },

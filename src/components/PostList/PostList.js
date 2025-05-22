@@ -1,19 +1,22 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, forwardRef } from 'react';
 import { 
   View, 
   Text, 
   FlatList, 
   RefreshControl,
   TouchableOpacity,
-  StyleSheet
+  StyleSheet,
+  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Post from '../Post';
 import ColorPalette from '../../constants/ColorPalette';
+import ScreenLayout from '../../components/layout/ScreenLayout';
 import { transformPost } from '../../utils/postTransformUtils';
 import LoadingIndicator from '../common/LoadingIndicator';
 
-const PostList = ({ 
+const PostListComponent = forwardRef(({ 
   fetchPostsFunction, 
   ListHeaderComponent, 
   ListEmptyComponent,
@@ -29,7 +32,9 @@ const PostList = ({
   refreshControlTintColor = ColorPalette.green,
   keyExtractorPrefix = "post",
   onPostCountChange, // New prop for notifications
-}) => {
+  contentContainerStyle,
+  scrollEventThrottle
+}, ref) => {
   // State for posts, pagination, and loading states
   const [posts, setPosts] = useState(initialPosts);
   const [loading, setLoading] = useState(true); // Start with loading true
@@ -187,7 +192,8 @@ const PostList = ({
     if (loading && hasMore && initialLoadComplete) {
       return (
         <LoadingIndicator 
-          size="small" 
+          size="large" 
+          color={ColorPalette.gradient_text}
           style={styles.loader} 
         />
       );
@@ -204,12 +210,20 @@ const PostList = ({
 
   // Initial loading screen (fullscreen loader)
   if (loading && !initialLoadComplete && posts.length === 0) {
-    return <LoadingIndicator fullScreen={true} />;
+  
+      return (
+        <ScreenLayout backgroundColor={ColorPalette.dark_bg} statusBarStyle="light-content" style={{flex: 1}}>
+          <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+            <ActivityIndicator size="large" color={ColorPalette.gradient_text} />
+          </View>
+        </ScreenLayout>
+      );
+    
   }
 
   return (
     <FlatList
-      ref={flatListRef}
+      ref={ref}
       data={posts}
       renderItem={renderPostItem}
       keyExtractor={keyExtractor}
@@ -237,16 +251,28 @@ const PostList = ({
       initialNumToRender={5}
       windowSize={10}
       onScroll={onScroll}
-      scrollEventThrottle={16}
+      scrollEventThrottle={scrollEventThrottle || 16}
     />
   );
-};
+});
+
+PostListComponent.displayName = 'PostList';
+
+// Create animated version
+const AnimatedPostListComponent = Animated.createAnimatedComponent(PostListComponent);
+
+export const AnimatedPostList = AnimatedPostListComponent;
+export default PostListComponent;
 
 const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
     paddingBottom: 20,
   },
+    container: {
+      flex: 1,
+      backgroundColor: ColorPalette.dark_bg,
+    },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -287,5 +313,3 @@ const styles = StyleSheet.create({
     backgroundColor: ColorPalette.main_black,
   },
 });
-
-export default PostList;

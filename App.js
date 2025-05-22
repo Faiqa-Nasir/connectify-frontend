@@ -8,6 +8,7 @@ import ColorPalette from './src/constants/ColorPalette';
 import { getStoredTokens } from './src/services/tokenService';
 import { restoreToken } from './src/redux/authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initializeUserData } from './src/utils/userUtils';
 
 // Component to handle bootstrap process
 const Bootstrap = ({ children }) => {
@@ -51,6 +52,11 @@ const Bootstrap = ({ children }) => {
 };
 
 export default function App() {
+  useEffect(() => {
+    // Initialize user data when app starts
+    initializeUserData();
+  }, []);
+
   return (
     <Provider store={store}>
       <NavigationContainer>

@@ -1,6 +1,54 @@
 import api from './apiService';
-import { BASE_URL, POST_ENDPOINTS } from '../constants/ApiConstants';
+import { BASE_URL, BASE_URL_AI, POST_ENDPOINTS } from '../constants/ApiConstants';
 import { getStoredTokens } from './tokenService';
+import axios from 'axios';
+import { Alert } from 'react-native'; 
+import * as FileSystem from 'expo-file-system';
+
+let showPostBlockedPopup = null;
+export const setPostBlockedPopupHandler = (handler) => {
+  showPostBlockedPopup = handler;
+};
+
+// Predict text safety
+const predictText = async (text) => {
+  try {
+    const response = await axios.post(`${BASE_URL_AI}/predict`, { text });
+    return response.data.is_safe;
+  } catch (error) {
+    console.error('Text prediction error:', error);
+    return true; // Fail-safe: treat as safe to avoid blocking all
+  }
+};
+
+// Predict image safety
+const predictImage = async (base64Image) => {
+  try {
+    const response = await axios.post(`${BASE_URL_AI}/predict_image`, {
+      image: base64Image,
+    });
+    return response.data.is_safe;
+  } catch (error) {
+    console.error('Image prediction error:', error);
+    return true;
+  }
+};
+
+const fileToBase64 = async (media) => {
+  if (media.base64) {
+    return media.base64.startsWith('data:') ? media.base64 : `data:image/jpeg;base64,${media.base64}`;
+  }
+  console.log('(NOBRIDGE) LOG Converting URI to base64:', media.uri);
+  try {
+    const base64 = await FileSystem.readAsStringAsync(media.uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    return `data:image/jpeg;base64,${base64}`;
+  } catch (error) {
+    console.error('(NOBRIDGE) ERROR Failed to convert URI to base64:', error);
+    return null;
+  }
+};
 
 /**
  * Fetch the user's post feed with pagination
@@ -138,37 +186,69 @@ export const validateFormDataMedia = (formData) => {
  * @param {Function} onProgress - Optional callback for upload progress
  * @returns {Promise} - Promise resolving to the created post
  */
-export const createPost = async (formData, retryCount = 0, onProgress = null) => {
+export const createPost = async (formData, mediaFiles = [], retryCount = 0, onProgress = null, isAnnouncement = false) => {
   try {
-   
+    const text = formData.get('content') || '';
+    console.log('(NOBRIDGE) LOG Content being validated:', text);
+    const isTextSafe = await predictText(text);
+    console.log('(NOBRIDGE) LOG predictText result:', isTextSafe);
+    if (!isTextSafe) {
+      console.log('(NOBRIDGE) LOG Text flagged as inappropriate');
+      if (showPostBlockedPopup) {
+        showPostBlockedPopup('Inappropriate or harmful text detected. Please modify your post.');
+      } else {
+        Alert.alert('Post Blocked', 'Inappropriate or harmful text detected.');
+      }
+      return null;
+    }
+
+    for (const media of mediaFiles) {
+      console.log('(NOBRIDGE) LOG Checking media file:', JSON.stringify(media, null, 2));
+      if (media.type === 'video/mp4') {
+        console.log('(NOBRIDGE) LOG Skipping moderation for video:', media);
+        continue; // Skip videos
+      }
+      if (!media.base64) {
+        console.log('(NOBRIDGE) WARN Image missing base64, attempting to generate:', media);
+        const base64Image = await fileToBase64(media);
+        if (!base64Image) {
+          console.log('(NOBRIDGE) WARN Failed to generate base64, skipping:', media);
+          continue;
+        }
+        media.base64 = base64Image;
+      }
+      console.log('(NOBRIDGE) LOG Predicting image');
+      const base64Image = media.base64.startsWith('data:') ? media.base64 : `data:image/jpeg;base64,${media.base64}`;
+      const isImageSafe = await predictImage(base64Image);
+      if (!isImageSafe) {
+        console.log('(NOBRIDGE) LOG Image not safe');
+        if (showPostBlockedPopup) {
+          showPostBlockedPopup('Inappropriate image(s) detected. Please remove or replace them.');
+        } else {
+          Alert.alert('Post Blocked', 'Inappropriate image(s) detected.');
+        }
+        return null;
+      }
+    }
+
     const response = await fetch(`${BASE_URL}${POST_ENDPOINTS.CREATE}`, {
       method: 'POST',
       body: formData,
       headers: {
         Authorization: `Bearer ${await getStoredTokens().then((tokens) => tokens.access)}`,
-        // ❌ DO NOT set 'Content-Type': fetch + FormData will auto set correct boundary
       },
-      timeout: 300000, // 5 minutes for uploads
-      onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        console.log(`Upload progress: ${percentCompleted}%`);
-        if (onProgress) onProgress(percentCompleted);
-      },
-
     });
 
-    console.log('Post created successfully');
+    if (!response.ok) throw new Error('Failed to create post');
     return response.json();
   } catch (error) {
-    console.error('Error creating post:', error);
-
+    console.error('(NOBRIDGE) ERROR Post creation failed:', error);
     if (retryCount < 2) {
-      console.log(`Retrying create post (attempt ${retryCount + 1})...`);
+      console.log(`(NOBRIDGE) LOG Retrying create post (attempt ${retryCount + 1})...`);
       await new Promise((resolve) => setTimeout(resolve, Math.pow(2, retryCount + 1) * 1000));
-      return createPost(formData, retryCount + 1, onProgress);
+      return createPost(formData, mediaFiles, retryCount + 1, onProgress, isAnnouncement);
     }
-
-    throw new Error(error.response?.data || 'Failed to create post. Please try again.');
+    throw error;
   }
 };
 
@@ -284,7 +364,7 @@ export const isVideoMedia = (mediaItem) => {
 /**
  * Calculate the time elapsed since the post was created
  * @param {string} dateString - ISO date string
- * @returns {string} - Human readable time (e.g., "2 hours ago")
+ * @returns {string} - Human readable time (e.g., "2 hs ago")
  */
 export const getTimeAgo = (dateString) => {
   const now = new Date();
@@ -293,12 +373,12 @@ export const getTimeAgo = (dateString) => {
 
   let interval = Math.floor(seconds / 31536000);
   if (interval >= 1) {
-    return interval === 1 ? '1 year ago' : `${interval} years ago`;
+    return interval === 1 ? '1 y ago' : `${interval} ys ago`;
   }
 
   interval = Math.floor(seconds / 2592000);
   if (interval >= 1) {
-    return interval === 1 ? '1 month ago' : `${interval} months ago`;
+    return interval === 1 ? '1 m ago' : `${interval} ms ago`;
   }
 
   interval = Math.floor(seconds / 86400);
@@ -308,15 +388,15 @@ export const getTimeAgo = (dateString) => {
 
   interval = Math.floor(seconds / 3600);
   if (interval >= 1) {
-    return interval === 1 ? '1 hour ago' : `${interval} hours ago`;
+    return interval === 1 ? '1 h ago' : `${interval} hs ago`;
   }
 
   interval = Math.floor(seconds / 60);
   if (interval >= 1) {
-    return interval === 1 ? '1 minute ago' : `${interval} minutes ago`;
+    return interval === 1 ? '1 min ago' : `${interval} mins ago`;
   }
 
-  return seconds < 10 ? 'just now' : `${Math.floor(seconds)} seconds ago`;
+  return seconds < 10 ? 'just now' : `${Math.floor(seconds)} s ago`;
 };
 
 /**
@@ -399,5 +479,97 @@ export const fetchTrendPosts = async (hashtag, page = 1, pageSize = 10, retryCou
         ? 'Network connection issue. Please check your internet connection.'
         : error.response?.data?.error || 'Failed to load trend posts.'
     );
+  }
+};
+
+/**
+ * Fetch announcements with pagination
+ * @param {number} page - Page number to fetch
+ * @param {number} pageSize - Number of announcements per page
+ * @param {number} retryCount - Number of retry attempts (internal use)
+ * @returns {Promise} - Promise resolving to the paginated announcements
+ */
+export const fetchAnnouncements = async (page = 1, pageSize = 10, retryCount = 0) => {
+  try {
+    const response = await api.get(POST_ENDPOINTS.ANNOUNCEMENTS, {
+      params: {
+        page,
+        page_size: pageSize,
+      },
+      timeout: 45000,
+    });
+
+    return response.data;
+  } catch (error) {
+    // Use same error handling as fetchPostFeed
+    console.error('Error fetching announcements:', error);
+
+    // Check if it's a timeout or network error
+    const isNetworkError =
+      error.message === 'Network Error' ||
+      error.code === 'ECONNABORTED' ||
+      error.message.includes('timeout');
+
+    // Retry logic for network errors (max 3 attempts)
+    if (isNetworkError && retryCount < 3) {
+      console.log(`Retrying fetch announcements (attempt ${retryCount + 1})...`);
+
+      // Exponential backoff delay: 1s, 2s, 4s
+      const delay = Math.pow(2, retryCount) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      // Retry the request
+      return fetchAnnouncements(page, pageSize, retryCount + 1);
+    }
+
+    // Format error message for the UI
+    let errorMessage;
+    if (isNetworkError) {
+      errorMessage = 'Network connection issue. Please check your internet connection and try again.';
+    } else if (error.response) {
+      // Server responded with an error status code
+      if (error.response.status === 401) {
+        errorMessage = 'Your session has expired. Please log in again.';
+      } else if (error.response.status === 403) {
+        errorMessage = "You don't have permission to access this content.";
+      } else if (error.response.status >= 500) {
+        errorMessage = 'Server error. Our team has been notified. Please try again later.';
+      } else {
+        errorMessage = `Error: ${error.response.status} - ${error.response.data?.message || 'Unknown error'}`;
+      }
+    } else {
+      errorMessage = error.message || 'An unexpected error occurred. Please try again.';
+    }
+
+    // Create a new error with the formatted message
+    const enhancedError = new Error(errorMessage);
+    enhancedError.originalError = error;
+    enhancedError.isNetworkError = isNetworkError;
+    throw enhancedError;
+  }
+};
+
+/**
+ * Update the comment count for a post
+ * @param {string|number} postId - The ID of the post to update
+ * @param {number} increment - The amount to increment/decrement (1 or -1)
+ */
+export const updatePostCommentCount = async (postId, increment) => {
+  try {
+    // First update local cache if it exists
+    const cacheKey = `post_${postId}`;
+    const cachedPostJson = await AsyncStorage.getItem(cacheKey);
+    if (cachedPostJson) {
+      const cachedPost = JSON.parse(cachedPostJson);
+      cachedPost.comments_count = (cachedPost.comments_count || 0) + increment;
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(cachedPost));
+    }
+
+    // Make API call to update comment count
+    await api.post(`${POST_ENDPOINTS.DETAILS(postId)}/update_comment_count/`, {
+      increment: increment
+    });
+  } catch (error) {
+    console.warn('Error updating post comment count:', error);
   }
 };
