@@ -4,7 +4,7 @@
 ## **Overview**  
 Connectify is a social and collaborative platform designed for organizations to enhance communication, issue reporting, and team collaboration. Inspired by **Threads, Slack, and Twitter**, it allows users to:  
 ✅ Post updates  
-✅ Send direct messages  
+✅ View announcements
 ✅ Raise complaints  
 ✅ Ask and answer queries  
 
@@ -12,10 +12,8 @@ Connectify is a social and collaborative platform designed for organizations to 
 
 ## **Features** 🛠  
 - 📢 **Home Feed** – View posts from colleagues with like, share, and save options.  
-- 💬 **Direct Messaging (DMs)** – One-on-one and group chats for seamless communication.  
 - 🚨 **Complaint System** – Raise complaints with an upvote/downvote mechanism.  
 - ❓ **Query Section** – Ask questions and browse answers.  
-- 🔔 **Real-Time Notifications** – Stay updated on important interactions.  
 - 📝 **Post Creation** – Share updates, complaints, or queries with optional anonymity.  
 - 📱 **Responsive UI** – Mobile-first design with an intuitive experience.  
 
